@@ -1,0 +1,195 @@
+import React, { useState, useMemo } from 'react';
+import { useBloodPressureData } from './hooks/useBloodPressureData';
+import { BloodPressureForm } from './components/BloodPressureForm';
+import { BloodPressureChart } from './components/BloodPressureChart';
+import { AIAnalysis } from './components/AIAnalysis';
+import { BloodPressureStatsComponent } from './components/BloodPressureStats';
+import { ReadingsList } from './components/ReadingsList';
+import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
+import { Heart, Plus, BarChart3, Brain, Activity, List } from 'lucide-react';
+import './App.css';
+
+type ViewMode = 'form' | 'chart' | 'analysis' | 'stats' | 'readings';
+
+function App() {
+  const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
+  const [currentView, setCurrentView] = useState<ViewMode>('form');
+  const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
+  const [editingReading, setEditingReading] = useState<any>(null);
+  
+  const filteredChartData = useMemo(() => {
+    const now = new Date();
+    let filtered = readings;
+    
+    if (chartPeriod === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filtered = readings.filter(r => r.timestamp >= weekAgo);
+    } else if (chartPeriod === 'month') {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      filtered = readings.filter(r => r.timestamp >= monthAgo);
+    }
+    
+    return prepareChartData(filtered);
+  }, [readings, chartPeriod]);
+
+  const stats = useMemo(() => calculateStats(readings, chartPeriod), [readings, chartPeriod]);
+  const analysis = useMemo(() => analyzeTrends(readings), [readings]);
+
+  const handleAddReading = async (reading: any) => {
+    try {
+      await addReading(reading);
+      setCurrentView('chart');
+    } catch (error) {
+      console.error('Failed to add reading:', error);
+    }
+  };
+
+  const handleEditReading = (reading: any) => {
+    setEditingReading(reading);
+    setCurrentView('form');
+  };
+
+  const handleUpdateReading = async (reading: any) => {
+    try {
+      await updateReading(editingReading.id, reading);
+      setEditingReading(null);
+      setCurrentView('chart');
+    } catch (error) {
+      console.error('Failed to update reading:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReading(null);
+    setCurrentView('chart');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your blood pressure data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <div className="bg-primary-100 p-2 rounded-lg mr-3">
+                <Heart className="h-8 w-8 text-primary-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Blood Pressure Tracker</h1>
+            </div>
+            <div className="text-sm text-gray-500">
+              {readings.length} reading{readings.length !== 1 ? 's' : ''} logged
+              <span className="ml-2 text-xs">
+                ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8">
+            {[
+              { id: 'form', label: 'Add Reading', icon: Plus },
+              { id: 'readings', label: 'All Readings', icon: List },
+              { id: 'chart', label: 'Charts', icon: BarChart3 },
+              { id: 'analysis', label: 'AI Analysis', icon: Brain },
+              { id: 'stats', label: 'Statistics', icon: Activity }
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setCurrentView(id as ViewMode)}
+                className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
+                  currentView === id
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="h-4 w-4 mr-2" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentView === 'form' && (
+          <div className="max-w-2xl mx-auto">
+            <BloodPressureForm
+              onSubmit={editingReading ? handleUpdateReading : handleAddReading}
+              onCancel={editingReading ? handleCancelEdit : undefined}
+              initialData={editingReading}
+              isEditing={!!editingReading}
+            />
+          </div>
+        )}
+
+        {currentView === 'chart' && (
+          <div className="space-y-6">
+            <BloodPressureChart
+              data={filteredChartData}
+              period={chartPeriod}
+              onPeriodChange={setChartPeriod}
+            />
+          </div>
+        )}
+
+        {currentView === 'analysis' && (
+          <div className="max-w-4xl mx-auto">
+            <AIAnalysis analysis={analysis} />
+          </div>
+        )}
+
+        {currentView === 'stats' && (
+          <div className="max-w-4xl mx-auto">
+            <BloodPressureStatsComponent stats={stats} />
+          </div>
+        )}
+
+        {currentView === 'readings' && (
+          <div className="max-w-4xl mx-auto">
+            <ReadingsList
+              readings={readings}
+              onEdit={handleEditReading}
+              onDelete={async (id) => {
+                try {
+                  await deleteReading(id);
+                } catch (error) {
+                  console.error('Failed to delete reading:', error);
+                }
+              }}
+            />
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="text-center text-sm text-gray-500">
+            <p>Blood Pressure Tracker - Track your health with AI-powered insights</p>
+            <p className="mt-1">
+              This app is for informational purposes only. Always consult with a healthcare provider for medical advice.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
