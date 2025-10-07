@@ -303,19 +303,21 @@ const analyzeTimePatterns = (readings: BloodPressureReading[]): string[] => {
   };
 
   // Calculate averages for each time period
-  const periodAverages = Object.entries(timePeriods).map(([period, readings]) => {
-    if (readings.length === 0) return null;
-    
-    const avgSystolic = readings.reduce((sum, r) => sum + r.systolic, 0) / readings.length;
-    const avgDiastolic = readings.reduce((sum, r) => sum + r.diastolic, 0) / readings.length;
-    
-    return {
-      period,
-      avgSystolic: Math.round(avgSystolic),
-      avgDiastolic: Math.round(avgDiastolic),
-      count: readings.length
-    };
-  }).filter(Boolean);
+  const periodAverages = Object.entries(timePeriods)
+    .map(([period, readings]) => {
+      if (readings.length === 0) return null;
+      
+      const avgSystolic = readings.reduce((sum, r) => sum + r.systolic, 0) / readings.length;
+      const avgDiastolic = readings.reduce((sum, r) => sum + r.diastolic, 0) / readings.length;
+      
+      return {
+        period,
+        avgSystolic: Math.round(avgSystolic),
+        avgDiastolic: Math.round(avgDiastolic),
+        count: readings.length
+      };
+    })
+    .filter((period): period is NonNullable<typeof period> => period !== null);
 
   if (periodAverages.length < 2) {
     return insights;
@@ -323,17 +325,17 @@ const analyzeTimePatterns = (readings: BloodPressureReading[]): string[] => {
 
   // Find highest and lowest periods
   const highestSystolic = periodAverages.reduce((max, current) => 
-    current!.avgSystolic > max.avgSystolic ? current! : max
+    current.avgSystolic > max.avgSystolic ? current : max
   );
   const lowestSystolic = periodAverages.reduce((min, current) => 
-    current!.avgSystolic < min.avgSystolic ? current! : min
+    current.avgSystolic < min.avgSystolic ? current : min
   );
 
   const highestDiastolic = periodAverages.reduce((max, current) => 
-    current!.avgDiastolic > max.avgDiastolic ? current! : max
+    current.avgDiastolic > max.avgDiastolic ? current : max
   );
   const lowestDiastolic = periodAverages.reduce((min, current) => 
-    current!.avgDiastolic < min.avgDiastolic ? current! : min
+    current.avgDiastolic < min.avgDiastolic ? current : min
   );
 
   // Generate insights based on time patterns
@@ -354,11 +356,11 @@ const analyzeTimePatterns = (readings: BloodPressureReading[]): string[] => {
 
   // Check for consistent high readings in specific periods
   const highRiskPeriods = periodAverages.filter(period => 
-    period!.avgSystolic >= 140 || period!.avgDiastolic >= 90
+    period.avgSystolic >= 140 || period.avgDiastolic >= 90
   );
 
   if (highRiskPeriods.length > 0) {
-    const periodNames = highRiskPeriods.map(p => p!.period).join(', ');
+    const periodNames = highRiskPeriods.map(p => p.period).join(', ');
     insights.push(
       `Your blood pressure readings are consistently high during ${periodNames}. Consider monitoring these times more closely and discussing with your healthcare provider.`
     );
@@ -366,11 +368,11 @@ const analyzeTimePatterns = (readings: BloodPressureReading[]): string[] => {
 
   // Check for optimal periods
   const optimalPeriods = periodAverages.filter(period => 
-    period!.avgSystolic < 120 && period!.avgDiastolic < 80
+    period.avgSystolic < 120 && period.avgDiastolic < 80
   );
 
   if (optimalPeriods.length > 0) {
-    const periodNames = optimalPeriods.map(p => p!.period).join(', ');
+    const periodNames = optimalPeriods.map(p => p.period).join(', ');
     insights.push(
       `Your blood pressure is consistently optimal during ${periodNames}. This suggests these may be your best times for important activities or medications.`
     );
