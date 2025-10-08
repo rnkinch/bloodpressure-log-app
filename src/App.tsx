@@ -38,11 +38,11 @@ function App() {
       filtered = readings.filter(r => r.timestamp >= monthAgo);
     }
     
-    return prepareChartData(filtered);
-  }, [readings, chartPeriod]);
+    return prepareChartData(filtered, cigarEntries, drinkEntries);
+  }, [readings, chartPeriod, cigarEntries, drinkEntries]);
 
   const stats = useMemo(() => calculateStats(readings, chartPeriod), [readings, chartPeriod]);
-  const analysis = useMemo(() => analyzeTrends(readings), [readings]);
+  const analysis = useMemo(() => analyzeTrends(readings, cigarEntries, drinkEntries), [readings, cigarEntries, drinkEntries]);
 
   const handleAddReading = async (reading: any) => {
     try {

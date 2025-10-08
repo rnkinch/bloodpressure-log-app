@@ -51,6 +51,11 @@ export interface ChartDataPoint {
   diastolic: number;
   heartRate: number;
   timestamp: number;
+  lifestyle?: {
+    cigars?: number;
+    drinks?: number;
+    alcoholContent?: number;
+  };
 }
 
 export interface TimeRangeFilter {

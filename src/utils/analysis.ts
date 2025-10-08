@@ -44,7 +44,11 @@ export const calculateStats = (readings: BloodPressureReading[], period: 'week' 
   };
 };
 
-export const analyzeTrends = (readings: BloodPressureReading[]): TrendAnalysis => {
+export const analyzeTrends = (
+  readings: BloodPressureReading[], 
+  cigarEntries: any[] = [], 
+  drinkEntries: any[] = []
+): TrendAnalysis => {
   if (readings.length < 2) {
     return {
       systolicTrend: 'stable',
@@ -76,7 +80,7 @@ export const analyzeTrends = (readings: BloodPressureReading[]): TrendAnalysis =
     riskLevel = 'moderate';
   }
 
-  const recommendations = generateRecommendations(systolicTrend, diastolicTrend, heartRateTrend, riskLevel, readings);
+  const recommendations = generateRecommendations(systolicTrend, diastolicTrend, heartRateTrend, riskLevel, readings, cigarEntries, drinkEntries);
   const insights = generateInsights(systolicTrend, diastolicTrend, heartRateTrend, avgSystolic, avgDiastolic, readings);
 
   return {
@@ -112,7 +116,9 @@ const generateRecommendations = (
   diastolicTrend: string,
   heartRateTrend: string,
   riskLevel: string,
-  readings: BloodPressureReading[]
+  readings: BloodPressureReading[],
+  cigarEntries: any[] = [],
+  drinkEntries: any[] = []
 ): string[] => {
   const recommendations: string[] = [];
   
@@ -134,7 +140,7 @@ const generateRecommendations = (
   }
 
   // Lifestyle-based recommendations
-  const lifestyleInsights = generateLifestyleRecommendations(readings);
+  const lifestyleInsights = generateLifestyleRecommendations(readings, cigarEntries, drinkEntries);
   recommendations.push(...lifestyleInsights);
   
   if (recommendations.length === 0) {
@@ -185,18 +191,122 @@ const generateInsights = (
   return insights;
 };
 
-const generateLifestyleRecommendations = (readings: BloodPressureReading[]): string[] => {
+const generateLifestyleRecommendations = (
+  readings: BloodPressureReading[], 
+  cigarEntries: any[] = [], 
+  drinkEntries: any[] = []
+): string[] => {
   const recommendations: string[] = [];
   
   if (readings.length === 0) {
     return recommendations;
   }
 
-  // Note: Lifestyle analysis will be handled separately since we now have independent lifestyle tracking
-  // This function is kept for future integration with lifestyle data
-  recommendations.push('Lifestyle tracking is now handled independently. Check the Lifestyle tab to view your cigar and drink entries.');
+  // Analyze lifestyle patterns and correlations
+  const lifestyleInsights = analyzeLifestylePatterns(readings, cigarEntries, drinkEntries);
+  recommendations.push(...lifestyleInsights);
 
   return recommendations;
+};
+
+const analyzeLifestylePatterns = (
+  readings: BloodPressureReading[], 
+  cigarEntries: any[], 
+  drinkEntries: any[]
+): string[] => {
+  const insights: string[] = [];
+  
+  if (cigarEntries.length === 0 && drinkEntries.length === 0) {
+    return insights;
+  }
+
+  // Analyze cigar patterns
+  if (cigarEntries.length > 0) {
+    const totalCigars = cigarEntries.reduce((sum, entry) => sum + entry.count, 0);
+    const avgCigarsPerDay = totalCigars / cigarEntries.length;
+    
+    // Find readings on days with cigars
+    const cigarDays = new Set(cigarEntries.map(entry => 
+      new Date(entry.timestamp).toDateString()
+    ));
+    const readingsOnCigarDays = readings.filter(reading => 
+      cigarDays.has(new Date(reading.timestamp).toDateString())
+    );
+    
+    if (readingsOnCigarDays.length > 0) {
+      const avgSystolic = readingsOnCigarDays.reduce((sum, r) => sum + r.systolic, 0) / readingsOnCigarDays.length;
+      const avgDiastolic = readingsOnCigarDays.reduce((sum, r) => sum + r.diastolic, 0) / readingsOnCigarDays.length;
+      
+      if (avgCigarsPerDay >= 3) {
+        if (avgSystolic >= 130 || avgDiastolic >= 80) {
+          insights.push(`High cigar consumption (${avgCigarsPerDay.toFixed(1)} cigars/day) may be contributing to elevated blood pressure readings (${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg). Consider reducing frequency.`);
+        }
+      } else if (avgCigarsPerDay >= 1) {
+        if (avgSystolic >= 140 || avgDiastolic >= 90) {
+          insights.push(`Regular cigar smoking (${avgCigarsPerDay.toFixed(1)} cigars/day) combined with high blood pressure readings suggests monitoring the relationship between smoking and your cardiovascular health.`);
+        }
+      }
+    }
+  }
+
+  // Analyze drinking patterns
+  if (drinkEntries.length > 0) {
+    const totalDrinks = drinkEntries.reduce((sum, entry) => sum + entry.count, 0);
+    const avgDrinksPerDay = totalDrinks / drinkEntries.length;
+    const avgAlcoholContent = drinkEntries
+      .filter(entry => entry.alcoholContent)
+      .reduce((sum, entry) => sum + entry.alcoholContent, 0) / 
+      drinkEntries.filter(entry => entry.alcoholContent).length || 0;
+    
+    // Find readings on days with drinks
+    const drinkDays = new Set(drinkEntries.map(entry => 
+      new Date(entry.timestamp).toDateString()
+    ));
+    const readingsOnDrinkDays = readings.filter(reading => 
+      drinkDays.has(new Date(reading.timestamp).toDateString())
+    );
+    
+    if (readingsOnDrinkDays.length > 0) {
+      const avgSystolic = readingsOnDrinkDays.reduce((sum, r) => sum + r.systolic, 0) / readingsOnDrinkDays.length;
+      const avgDiastolic = readingsOnDrinkDays.reduce((sum, r) => sum + r.diastolic, 0) / readingsOnDrinkDays.length;
+      
+      if (avgDrinksPerDay >= 4) {
+        if (avgSystolic >= 130 || avgDiastolic >= 80) {
+          insights.push(`High alcohol consumption (${avgDrinksPerDay.toFixed(1)} drinks/day) may be contributing to elevated blood pressure readings (${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg). Consider reducing intake.`);
+        }
+      } else if (avgDrinksPerDay >= 2) {
+        if (avgSystolic >= 140 || avgDiastolic >= 90) {
+          insights.push(`Regular alcohol consumption (${avgDrinksPerDay.toFixed(1)} drinks/day) with high blood pressure readings suggests monitoring the relationship between drinking and your cardiovascular health.`);
+        }
+      }
+
+      // High alcohol content analysis
+      if (avgAlcoholContent >= 15 && (avgSystolic >= 130 || avgDiastolic >= 80)) {
+        insights.push(`High-alcohol content drinks (${avgAlcoholContent.toFixed(1)}% ABV average) may be contributing to elevated blood pressure. Consider switching to lower-alcohol alternatives.`);
+      }
+    }
+  }
+
+  // Combined lifestyle analysis
+  const combinedDays = new Set([
+    ...cigarEntries.map(entry => new Date(entry.timestamp).toDateString()),
+    ...drinkEntries.map(entry => new Date(entry.timestamp).toDateString())
+  ]);
+  
+  const readingsOnLifestyleDays = readings.filter(reading => 
+    combinedDays.has(new Date(reading.timestamp).toDateString())
+  );
+  
+  if (readingsOnLifestyleDays.length > 0) {
+    const avgSystolic = readingsOnLifestyleDays.reduce((sum, r) => sum + r.systolic, 0) / readingsOnLifestyleDays.length;
+    const avgDiastolic = readingsOnLifestyleDays.reduce((sum, r) => sum + r.diastolic, 0) / readingsOnLifestyleDays.length;
+    
+    if (avgSystolic >= 130 || avgDiastolic >= 80) {
+      insights.push('Days with lifestyle activities (smoking/drinking) show elevated blood pressure readings. Consider the cumulative effects of these activities on your cardiovascular health.');
+    }
+  }
+
+  return insights;
 };
 
 const analyzeLifestyleTiming = (readings: BloodPressureReading[]): string[] => {
@@ -208,18 +318,43 @@ const analyzeLifestyleTiming = (readings: BloodPressureReading[]): string[] => {
   return insights;
 };
 
-export const prepareChartData = (readings: BloodPressureReading[]): ChartDataPoint[] => {
+export const prepareChartData = (
+  readings: BloodPressureReading[], 
+  cigarEntries: any[] = [], 
+  drinkEntries: any[] = []
+): ChartDataPoint[] => {
   return readings
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
     .map(reading => {
       // Convert to local timezone for display
       const localDate = new Date(reading.timestamp.getTime() - reading.timestamp.getTimezoneOffset() * 60000);
+      
+      // Find lifestyle activities on the same day
+      const readingDate = new Date(reading.timestamp);
+      const sameDayCigars = cigarEntries.filter(entry => 
+        new Date(entry.timestamp).toDateString() === readingDate.toDateString()
+      );
+      const sameDayDrinks = drinkEntries.filter(entry => 
+        new Date(entry.timestamp).toDateString() === readingDate.toDateString()
+      );
+      
+      const totalCigars = sameDayCigars.reduce((sum, entry) => sum + entry.count, 0);
+      const totalDrinks = sameDayDrinks.reduce((sum, entry) => sum + entry.count, 0);
+      const avgAlcoholContent = sameDayDrinks.length > 0 
+        ? sameDayDrinks.reduce((sum, entry) => sum + (entry.alcoholContent || 0), 0) / sameDayDrinks.length 
+        : 0;
+
       return {
         date: format(localDate, 'MMM dd'),
         systolic: reading.systolic,
         diastolic: reading.diastolic,
         heartRate: reading.heartRate,
-        timestamp: reading.timestamp.getTime()
+        timestamp: reading.timestamp.getTime(),
+        lifestyle: (totalCigars > 0 || totalDrinks > 0) ? {
+          cigars: totalCigars,
+          drinks: totalDrinks,
+          alcoholContent: avgAlcoholContent
+        } : undefined
       };
     });
 };

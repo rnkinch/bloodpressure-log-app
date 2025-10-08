@@ -8,7 +8,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine,
+  Scatter,
+  ComposedChart
 } from 'recharts';
 import { ChartDataPoint } from '../types';
 import { TrendingUp, Activity } from 'lucide-react';
@@ -131,13 +133,37 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
               domain={[40, 120]}
             />
             <Tooltip
-              formatter={formatTooltipValue}
-              labelFormatter={(label) => `Date: ${label}`}
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0]?.payload;
+                  return (
+                    <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
+                      <p className="font-semibold text-gray-900 mb-2">{label}</p>
+                      {payload.map((entry: any, index: number) => (
+                        <p key={index} className="text-sm" style={{ color: entry.color }}>
+                          {entry.name}: {entry.value}
+                          {entry.dataKey === 'systolic' || entry.dataKey === 'diastolic' ? ' mmHg' : 
+                           entry.dataKey === 'heartRate' ? ' bpm' : ''}
+                        </p>
+                      ))}
+                      {data?.lifestyle && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <p className="text-xs font-medium text-gray-600 mb-1">Lifestyle Activities:</p>
+                          {data.lifestyle.cigars > 0 && (
+                            <p className="text-xs text-orange-600">🚬 {data.lifestyle.cigars} cigar{data.lifestyle.cigars > 1 ? 's' : ''}</p>
+                          )}
+                          {data.lifestyle.drinks > 0 && (
+                            <p className="text-xs text-blue-600">🍷 {data.lifestyle.drinks} drink{data.lifestyle.drinks > 1 ? 's' : ''}</p>
+                          )}
+                          {data.lifestyle.alcoholContent > 0 && (
+                            <p className="text-xs text-gray-500">({data.lifestyle.alcoholContent.toFixed(1)}% ABV avg)</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
               }}
             />
             <Legend />
