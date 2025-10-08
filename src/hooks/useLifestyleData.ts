@@ -1,35 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CigarEntry, DrinkEntry } from '../types';
-import { api } from '../utils/api';
 
 export const useLifestyleData = () => {
   const [cigarEntries, setCigarEntries] = useState<CigarEntry[]>([]);
   const [drinkEntries, setDrinkEntries] = useState<DrinkEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load lifestyle data from API on mount
+  // Load lifestyle data from localStorage on mount
   useEffect(() => {
-    const loadLifestyleData = async () => {
+    const loadLifestyleData = () => {
       try {
-        const [cigars, drinks] = await Promise.all([
-          api.getCigarEntries(),
-          api.getDrinkEntries()
-        ]);
+        const savedCigars = localStorage.getItem('cigarEntries');
+        const savedDrinks = localStorage.getItem('drinkEntries');
         
-        // Convert timestamp strings back to Date objects
-        const cigarsWithDates = cigars.map(entry => ({
-          ...entry,
-          timestamp: new Date(entry.timestamp)
-        }));
-        const drinksWithDates = drinks.map(entry => ({
-          ...entry,
-          timestamp: new Date(entry.timestamp)
-        }));
+        if (savedCigars) {
+          const cigars = JSON.parse(savedCigars).map((entry: any) => ({
+            ...entry,
+            timestamp: new Date(entry.timestamp)
+          }));
+          setCigarEntries(cigars);
+        }
         
-        setCigarEntries(cigarsWithDates);
-        setDrinkEntries(drinksWithDates);
+        if (savedDrinks) {
+          const drinks = JSON.parse(savedDrinks).map((entry: any) => ({
+            ...entry,
+            timestamp: new Date(entry.timestamp)
+          }));
+          setDrinkEntries(drinks);
+        }
       } catch (error) {
-        console.error('Failed to load lifestyle data:', error);
+        console.error('Failed to load lifestyle data from localStorage:', error);
       } finally {
         setLoading(false);
       }
