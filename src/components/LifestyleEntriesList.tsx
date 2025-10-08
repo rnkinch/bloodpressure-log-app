@@ -21,8 +21,8 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
   onDeleteDrink
 }) => {
   const allEntries = [
-    ...cigarEntries.map(entry => ({ ...entry, type: 'cigar' as const })),
-    ...drinkEntries.map(entry => ({ ...entry, type: 'drink' as const }))
+    ...cigarEntries.map(entry => ({ ...entry, entryType: 'cigar' as const })),
+    ...drinkEntries.map(entry => ({ ...entry, entryType: 'drink' as const }))
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   if (allEntries.length === 0) {
@@ -55,13 +55,13 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
       <div className="space-y-3">
         {allEntries.map((entry) => (
           <div
-            key={`${entry.type}-${entry.id}`}
+            key={`${entry.entryType}-${entry.id}`}
             className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-4 mb-2">
-                  {entry.type === 'cigar' ? (
+                  {entry.entryType === 'cigar' ? (
                     <>
                       <div className="flex items-center gap-2">
                         <Cigarette className="h-5 w-5 text-orange-600" />
@@ -96,11 +96,11 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
                     </>
                   )}
                   <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    entry.type === 'cigar' 
+                    entry.entryType === 'cigar' 
                       ? 'bg-orange-100 text-orange-700' 
                       : 'bg-blue-100 text-blue-700'
                   }`}>
-                    {entry.type === 'cigar' ? '🚬 Cigar' : '🍷 Drink'}
+                    {entry.entryType === 'cigar' ? '🚬 Cigar' : '🍷 Drink'}
                   </div>
                 </div>
                 
@@ -118,14 +118,14 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
               
               <div className="flex gap-2 ml-4">
                 <button
-                  onClick={() => entry.type === 'cigar' ? onEditCigar(entry as CigarEntry) : onEditDrink(entry as DrinkEntry)}
+                  onClick={() => entry.entryType === 'cigar' ? onEditCigar(entry as CigarEntry) : onEditDrink(entry as DrinkEntry)}
                   className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                   title="Edit entry"
                 >
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => entry.type === 'cigar' ? onDeleteCigar(entry.id) : onDeleteDrink(entry.id)}
+                  onClick={() => entry.entryType === 'cigar' ? onDeleteCigar(entry.id) : onDeleteDrink(entry.id)}
                   className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                   title="Delete entry"
                 >
