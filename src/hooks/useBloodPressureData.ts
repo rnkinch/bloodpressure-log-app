@@ -10,13 +10,16 @@ export const useBloodPressureData = () => {
   useEffect(() => {
     const loadReadings = async () => {
       try {
+        console.log('Loading blood pressure readings from API...');
         const loadedReadings = await api.getReadings();
+        console.log('Loaded readings:', loadedReadings.length, 'entries');
         // Convert timestamp strings back to Date objects
         const readingsWithDates = loadedReadings.map(reading => ({
           ...reading,
           timestamp: new Date(reading.timestamp)
         }));
         setReadings(readingsWithDates);
+        console.log('Set readings in state:', readingsWithDates.length, 'entries');
       } catch (error) {
         console.error('Failed to load readings:', error);
       } finally {
