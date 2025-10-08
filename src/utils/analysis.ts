@@ -192,73 +192,9 @@ const generateLifestyleRecommendations = (readings: BloodPressureReading[]): str
     return recommendations;
   }
 
-  // Analyze cigar smoking patterns
-  const smokingReadings = readings.filter(r => r.cigars && r.cigars.count > 0);
-  const totalCigars = smokingReadings.reduce((sum, r) => sum + (r.cigars?.count || 0), 0);
-  const avgCigarsPerDay = smokingReadings.length > 0 ? totalCigars / smokingReadings.length : 0;
-
-  if (smokingReadings.length > 0) {
-    const avgSystolic = smokingReadings.reduce((sum, r) => sum + r.systolic, 0) / smokingReadings.length;
-    const avgDiastolic = smokingReadings.reduce((sum, r) => sum + r.diastolic, 0) / smokingReadings.length;
-    
-    if (avgCigarsPerDay >= 3) {
-      if (avgSystolic >= 130 || avgDiastolic >= 80) {
-        recommendations.push(`High cigar consumption (${avgCigarsPerDay.toFixed(1)} cigars/day on average) may be contributing to elevated blood pressure. Consider reducing frequency or consulting with a healthcare provider about smoking cessation strategies.`);
-      }
-    } else if (avgCigarsPerDay >= 1) {
-      if (avgSystolic >= 140 || avgDiastolic >= 90) {
-        recommendations.push(`Regular cigar smoking (${avgCigarsPerDay.toFixed(1)} cigars/day) combined with high blood pressure readings suggests a potential correlation. Consider monitoring your blood pressure before and after smoking.`);
-      }
-    }
-  }
-
-  // Analyze drinking patterns
-  const drinkingReadings = readings.filter(r => r.drinks && r.drinks.count > 0);
-  const totalDrinks = drinkingReadings.reduce((sum, r) => sum + (r.drinks?.count || 0), 0);
-  const avgDrinksPerDay = drinkingReadings.length > 0 ? totalDrinks / drinkingReadings.length : 0;
-  const avgAlcoholContent = drinkingReadings
-    .filter(r => r.drinks?.alcoholContent)
-    .reduce((sum, r) => sum + (r.drinks?.alcoholContent || 0), 0) / 
-    drinkingReadings.filter(r => r.drinks?.alcoholContent).length || 0;
-
-  if (drinkingReadings.length > 0) {
-    const avgSystolic = drinkingReadings.reduce((sum, r) => sum + r.systolic, 0) / drinkingReadings.length;
-    const avgDiastolic = drinkingReadings.reduce((sum, r) => sum + r.diastolic, 0) / drinkingReadings.length;
-    
-    if (avgDrinksPerDay >= 4) {
-      if (avgSystolic >= 130 || avgDiastolic >= 80) {
-        recommendations.push(`High alcohol consumption (${avgDrinksPerDay.toFixed(1)} drinks/day on average) may be contributing to elevated blood pressure. Consider reducing alcohol intake and monitoring blood pressure changes.`);
-      }
-    } else if (avgDrinksPerDay >= 2) {
-      if (avgSystolic >= 140 || avgDiastolic >= 90) {
-        recommendations.push(`Regular alcohol consumption (${avgDrinksPerDay.toFixed(1)} drinks/day) with high blood pressure readings suggests monitoring the relationship between drinking and your blood pressure.`);
-      }
-    }
-
-    // High alcohol content analysis
-    if (avgAlcoholContent >= 15 && (avgSystolic >= 130 || avgDiastolic >= 80)) {
-      recommendations.push(`High-alcohol content drinks (${avgAlcoholContent.toFixed(1)}% ABV average) may be contributing to elevated blood pressure. Consider switching to lower-alcohol alternatives.`);
-    }
-  }
-
-  // Combined lifestyle analysis
-  const combinedLifestyleReadings = readings.filter(r => 
-    (r.cigars && r.cigars.count > 0) && 
-    (r.drinks && r.drinks.count > 0)
-  );
-
-  if (combinedLifestyleReadings.length > 0) {
-    const avgSystolic = combinedLifestyleReadings.reduce((sum, r) => sum + r.systolic, 0) / combinedLifestyleReadings.length;
-    const avgDiastolic = combinedLifestyleReadings.reduce((sum, r) => sum + r.diastolic, 0) / combinedLifestyleReadings.length;
-    
-    if (avgSystolic >= 130 || avgDiastolic >= 80) {
-      recommendations.push('The combination of smoking and drinking may be amplifying blood pressure effects. Consider addressing both lifestyle factors for optimal cardiovascular health.');
-    }
-  }
-
-  // Time-based lifestyle analysis
-  const timeBasedInsights = analyzeLifestyleTiming(readings);
-  recommendations.push(...timeBasedInsights);
+  // Note: Lifestyle analysis will be handled separately since we now have independent lifestyle tracking
+  // This function is kept for future integration with lifestyle data
+  recommendations.push('Lifestyle tracking is now handled independently. Check the Lifestyle tab to view your cigar and drink entries.');
 
   return recommendations;
 };
@@ -266,38 +202,9 @@ const generateLifestyleRecommendations = (readings: BloodPressureReading[]): str
 const analyzeLifestyleTiming = (readings: BloodPressureReading[]): string[] => {
   const insights: string[] = [];
   
-  // Analyze cigar timing patterns
-  const cigarReadings = readings.filter(r => r.cigars && r.cigars.count > 0);
-  if (cigarReadings.length >= 3) {
-    const eveningCigars = cigarReadings.filter(r => {
-      const hour = new Date(r.cigars!.timestamp).getHours();
-      return hour >= 18 || hour <= 6;
-    });
-    
-    if (eveningCigars.length > cigarReadings.length * 0.6) {
-      const avgSystolic = eveningCigars.reduce((sum, r) => sum + r.systolic, 0) / eveningCigars.length;
-      if (avgSystolic >= 130) {
-        insights.push('Evening cigar smoking appears to correlate with elevated blood pressure readings. Consider monitoring blood pressure at different times of day.');
-      }
-    }
-  }
-
-  // Analyze drink timing patterns
-  const drinkReadings = readings.filter(r => r.drinks && r.drinks.count > 0);
-  if (drinkReadings.length >= 3) {
-    const eveningDrinks = drinkReadings.filter(r => {
-      const hour = new Date(r.drinks!.timestamp).getHours();
-      return hour >= 18 || hour <= 6;
-    });
-    
-    if (eveningDrinks.length > drinkReadings.length * 0.6) {
-      const avgSystolic = eveningDrinks.reduce((sum, r) => sum + r.systolic, 0) / eveningDrinks.length;
-      if (avgSystolic >= 130) {
-        insights.push('Evening alcohol consumption appears to correlate with elevated blood pressure readings. Consider the timing of your drinking habits.');
-      }
-    }
-  }
-
+  // Note: Lifestyle timing analysis will be handled separately since we now have independent lifestyle tracking
+  // This function is kept for future integration with lifestyle data
+  
   return insights;
 };
 
