@@ -1,28 +1,28 @@
 import React, { useState } from 'react';
-import { BloodPressureReading } from '../types';
-import { Heart, Calendar, Plus } from 'lucide-react';
+import { DrinkEntry } from '../types';
+import { Wine, Calendar, Plus } from 'lucide-react';
 import { toLocalDateTimeString, fromLocalDateTimeString, getCurrentLocalDateTime, getTimeAgo } from '../utils/timezone';
 
-interface BloodPressureFormProps {
-  onSubmit: (reading: Omit<BloodPressureReading, 'id'>) => void;
+interface DrinkFormProps {
+  onSubmit: (entry: Omit<DrinkEntry, 'id'>) => void;
   onCancel?: () => void;
-  initialData?: Partial<BloodPressureReading>;
+  initialData?: Partial<DrinkEntry>;
   isEditing?: boolean;
 }
 
-export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
+export const DrinkForm: React.FC<DrinkFormProps> = ({
   onSubmit,
   onCancel,
   initialData,
   isEditing = false
 }) => {
   const [formData, setFormData] = useState({
-    systolic: initialData?.systolic || '',
-    diastolic: initialData?.diastolic || '',
-    heartRate: initialData?.heartRate || '',
+    count: initialData?.count || 1,
     timestamp: initialData?.timestamp 
       ? toLocalDateTimeString(initialData.timestamp)
       : getCurrentLocalDateTime(),
+    type: initialData?.type || '',
+    alcoholContent: initialData?.alcoholContent || '',
     notes: initialData?.notes || ''
   });
 
@@ -31,20 +31,12 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.systolic || formData.systolic < 50 || formData.systolic > 300) {
-      newErrors.systolic = 'Systolic pressure must be between 50-300 mmHg';
+    if (!formData.count || formData.count < 1 || formData.count > 20) {
+      newErrors.count = 'Number of drinks must be between 1-20';
     }
 
-    if (!formData.diastolic || formData.diastolic < 30 || formData.diastolic > 200) {
-      newErrors.diastolic = 'Diastolic pressure must be between 30-200 mmHg';
-    }
-
-    if (formData.systolic && formData.diastolic && Number(formData.systolic) <= Number(formData.diastolic)) {
-      newErrors.systolic = 'Systolic pressure must be higher than diastolic pressure';
-    }
-
-    if (!formData.heartRate || formData.heartRate < 30 || formData.heartRate > 200) {
-      newErrors.heartRate = 'Heart rate must be between 30-200 BPM';
+    if (formData.alcoholContent && (Number(formData.alcoholContent) < 0 || Number(formData.alcoholContent) > 100)) {
+      newErrors.alcoholContent = 'Alcohol content must be between 0-100%';
     }
 
     setErrors(newErrors);
@@ -59,20 +51,20 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
     }
 
     onSubmit({
-      systolic: Number(formData.systolic),
-      diastolic: Number(formData.diastolic),
-      heartRate: Number(formData.heartRate),
+      count: Number(formData.count),
       timestamp: fromLocalDateTimeString(formData.timestamp),
+      type: formData.type.trim() || undefined,
+      alcoholContent: formData.alcoholContent ? Number(formData.alcoholContent) : undefined,
       notes: formData.notes.trim() || undefined
     });
 
     // Reset form if not editing
     if (!isEditing) {
       setFormData({
-        systolic: '',
-        diastolic: '',
-        heartRate: '',
+        count: 1,
         timestamp: getCurrentLocalDateTime(),
+        type: '',
+        alcoholContent: '',
         notes: ''
       });
     }
@@ -89,74 +81,32 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
       <div className="flex items-center mb-6">
-        <div className="bg-primary-100 p-2 rounded-lg mr-3">
-          <Heart className="h-6 w-6 text-primary-600" />
+        <div className="bg-blue-100 p-2 rounded-lg mr-3">
+          <Wine className="h-6 w-6 text-blue-600" />
         </div>
         <h2 className="text-xl font-semibold text-gray-900">
-          {isEditing ? 'Edit Reading' : 'Add Blood Pressure Reading'}
+          {isEditing ? 'Edit Drink Entry' : 'Add Drink Entry'}
         </h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Systolic (mmHg)
-            </label>
-            <input
-              type="number"
-              min="50"
-              max="300"
-              value={formData.systolic}
-              onChange={(e) => handleInputChange('systolic', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.systolic ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="120"
-            />
-            {errors.systolic && (
-              <p className="text-red-500 text-xs mt-1">{errors.systolic}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Diastolic (mmHg)
-            </label>
-            <input
-              type="number"
-              min="30"
-              max="200"
-              value={formData.diastolic}
-              onChange={(e) => handleInputChange('diastolic', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.diastolic ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="80"
-            />
-            {errors.diastolic && (
-              <p className="text-red-500 text-xs mt-1">{errors.diastolic}</p>
-            )}
-          </div>
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Heart Rate (BPM)
+            Number of Drinks
           </label>
           <input
             type="number"
-            min="30"
-            max="200"
-            value={formData.heartRate}
-            onChange={(e) => handleInputChange('heartRate', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-              errors.heartRate ? 'border-red-500' : 'border-gray-300'
+            min="1"
+            max="20"
+            value={formData.count}
+            onChange={(e) => handleInputChange('count', e.target.value)}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              errors.count ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="72"
+            placeholder="1"
           />
-          {errors.heartRate && (
-            <p className="text-red-500 text-xs mt-1">{errors.heartRate}</p>
+          {errors.count && (
+            <p className="text-red-500 text-xs mt-1">{errors.count}</p>
           )}
         </div>
 
@@ -170,7 +120,7 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
               type="datetime-local"
               value={formData.timestamp}
               onChange={(e) => handleInputChange('timestamp', e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
@@ -204,13 +154,42 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
             >
               Yesterday
             </button>
-            <button
-              type="button"
-              onClick={() => handleInputChange('timestamp', getTimeAgo(1, 'week'))}
-              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-            >
-              1 week ago
-            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Type of Drink (Optional)
+            </label>
+            <input
+              type="text"
+              value={formData.type}
+              onChange={(e) => handleInputChange('type', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., Wine, Beer, Whiskey"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alcohol % (Optional)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={formData.alcoholContent}
+              onChange={(e) => handleInputChange('alcoholContent', e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                errors.alcoholContent ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="12.5"
+            />
+            {errors.alcoholContent && (
+              <p className="text-red-500 text-xs mt-1">{errors.alcoholContent}</p>
+            )}
           </div>
         </div>
 
@@ -222,19 +201,18 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
             value={formData.notes}
             onChange={(e) => handleInputChange('notes', e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            placeholder="Any additional notes about this reading..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Any notes about the drinks..."
           />
         </div>
-
 
         <div className="flex gap-3 pt-4">
           <button
             type="submit"
-            className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {isEditing ? 'Update Reading' : 'Add Reading'}
+            {isEditing ? 'Update Entry' : 'Add Entry'}
           </button>
           {onCancel && (
             <button

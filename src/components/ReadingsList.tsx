@@ -75,46 +75,9 @@ export const ReadingsList: React.FC<ReadingsListProps> = ({
                     {format(new Date(reading.timestamp), 'MMM dd, yyyy - h:mm a')}
                   </div>
                   
-                  {(reading.notes || reading.cigars || reading.drinks) && (
-                    <div className="mt-2 space-y-1">
-                      {reading.notes && (
-                        <div className="text-sm text-gray-600 italic">
-                          "{reading.notes}"
-                        </div>
-                      )}
-                      {(reading.cigars || reading.drinks) && (
-                        <div className="space-y-1">
-                          {reading.cigars && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
-                                🚬 {reading.cigars.count} cigar{reading.cigars.count > 1 ? 's' : ''}
-                              </span>
-                              {reading.cigars.brand && (
-                                <span className="text-gray-500">({reading.cigars.brand})</span>
-                              )}
-                              <span className="text-gray-400">
-                                {format(new Date(reading.cigars.timestamp), 'h:mm a')}
-                              </span>
-                            </div>
-                          )}
-                          {reading.drinks && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                                🍷 {reading.drinks.count} drink{reading.drinks.count > 1 ? 's' : ''}
-                              </span>
-                              {reading.drinks.type && (
-                                <span className="text-gray-500">({reading.drinks.type})</span>
-                              )}
-                              {reading.drinks.alcoholContent && (
-                                <span className="text-gray-500">{reading.drinks.alcoholContent}% ABV</span>
-                              )}
-                              <span className="text-gray-400">
-                                {format(new Date(reading.drinks.timestamp), 'h:mm a')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  {reading.notes && (
+                    <div className="mt-2 text-sm text-gray-600 italic">
+                      "{reading.notes}"
                     </div>
                   )}
                 </div>

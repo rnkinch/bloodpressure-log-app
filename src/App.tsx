@@ -5,17 +5,26 @@ import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
 import { BloodPressureStatsComponent } from './components/BloodPressureStats';
 import { ReadingsList } from './components/ReadingsList';
+import { CigarForm } from './components/CigarForm';
+import { DrinkForm } from './components/DrinkForm';
+import { LifestyleEntriesList } from './components/LifestyleEntriesList';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'analysis' | 'stats' | 'readings';
+type ViewMode = 'form' | 'chart' | 'analysis' | 'stats' | 'readings' | 'cigar' | 'drink' | 'lifestyle';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
   const [currentView, setCurrentView] = useState<ViewMode>('form');
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
+  
+  // Lifestyle data state
+  const [cigarEntries, setCigarEntries] = useState<any[]>([]);
+  const [drinkEntries, setDrinkEntries] = useState<any[]>([]);
+  const [editingCigar, setEditingCigar] = useState<any>(null);
+  const [editingDrink, setEditingDrink] = useState<any>(null);
   
   const filteredChartData = useMemo(() => {
     const now = new Date();
@@ -64,6 +73,59 @@ function App() {
     setCurrentView('chart');
   };
 
+  // Lifestyle handlers
+  const handleAddCigar = (cigar: any) => {
+    const newCigar = { ...cigar, id: Date.now().toString() };
+    setCigarEntries(prev => [newCigar, ...prev]);
+    setCurrentView('lifestyle');
+  };
+
+  const handleEditCigar = (cigar: any) => {
+    setEditingCigar(cigar);
+    setCurrentView('cigar');
+  };
+
+  const handleUpdateCigar = (cigar: any) => {
+    setCigarEntries(prev => prev.map(c => c.id === editingCigar.id ? { ...cigar, id: editingCigar.id } : c));
+    setEditingCigar(null);
+    setCurrentView('lifestyle');
+  };
+
+  const handleDeleteCigar = (id: string) => {
+    setCigarEntries(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleCancelCigarEdit = () => {
+    setEditingCigar(null);
+    setCurrentView('lifestyle');
+  };
+
+  const handleAddDrink = (drink: any) => {
+    const newDrink = { ...drink, id: Date.now().toString() };
+    setDrinkEntries(prev => [newDrink, ...prev]);
+    setCurrentView('lifestyle');
+  };
+
+  const handleEditDrink = (drink: any) => {
+    setEditingDrink(drink);
+    setCurrentView('drink');
+  };
+
+  const handleUpdateDrink = (drink: any) => {
+    setDrinkEntries(prev => prev.map(d => d.id === editingDrink.id ? { ...drink, id: editingDrink.id } : d));
+    setEditingDrink(null);
+    setCurrentView('lifestyle');
+  };
+
+  const handleDeleteDrink = (id: string) => {
+    setDrinkEntries(prev => prev.filter(d => d.id !== id));
+  };
+
+  const handleCancelDrinkEdit = () => {
+    setEditingDrink(null);
+    setCurrentView('lifestyle');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -106,7 +168,8 @@ function App() {
               { id: 'readings', label: 'All Readings', icon: List },
               { id: 'chart', label: 'Charts', icon: BarChart3 },
               { id: 'analysis', label: 'AI Analysis', icon: Brain },
-              { id: 'stats', label: 'Statistics', icon: Activity }
+              { id: 'stats', label: 'Statistics', icon: Activity },
+              { id: 'lifestyle', label: 'Lifestyle', icon: Cigarette }
             ].map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -172,6 +235,57 @@ function App() {
                   console.error('Failed to delete reading:', error);
                 }
               }}
+            />
+          </div>
+        )}
+
+        {currentView === 'cigar' && (
+          <div className="max-w-2xl mx-auto">
+            <CigarForm
+              onSubmit={editingCigar ? handleUpdateCigar : handleAddCigar}
+              onCancel={editingCigar ? handleCancelCigarEdit : undefined}
+              initialData={editingCigar}
+              isEditing={!!editingCigar}
+            />
+          </div>
+        )}
+
+        {currentView === 'drink' && (
+          <div className="max-w-2xl mx-auto">
+            <DrinkForm
+              onSubmit={editingDrink ? handleUpdateDrink : handleAddDrink}
+              onCancel={editingDrink ? handleCancelDrinkEdit : undefined}
+              initialData={editingDrink}
+              isEditing={!!editingDrink}
+            />
+          </div>
+        )}
+
+        {currentView === 'lifestyle' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setCurrentView('cigar')}
+                className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                <Cigarette className="h-4 w-4 mr-2" />
+                Add Cigar Entry
+              </button>
+              <button
+                onClick={() => setCurrentView('drink')}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Wine className="h-4 w-4 mr-2" />
+                Add Drink Entry
+              </button>
+            </div>
+            <LifestyleEntriesList
+              cigarEntries={cigarEntries}
+              drinkEntries={drinkEntries}
+              onEditCigar={handleEditCigar}
+              onDeleteCigar={handleDeleteCigar}
+              onEditDrink={handleEditDrink}
+              onDeleteDrink={handleDeleteDrink}
             />
           </div>
         )}

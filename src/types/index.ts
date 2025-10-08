@@ -5,19 +5,23 @@ export interface BloodPressureReading {
   heartRate: number;
   timestamp: Date;
   notes?: string;
-  cigars?: {
-    count: number;
-    timestamp: Date;
-    brand?: string;
-    notes?: string;
-  };
-  drinks?: {
-    count: number;
-    timestamp: Date;
-    type?: string;
-    alcoholContent?: number; // percentage
-    notes?: string;
-  };
+}
+
+export interface CigarEntry {
+  id: string;
+  count: number;
+  timestamp: Date;
+  brand?: string;
+  notes?: string;
+}
+
+export interface DrinkEntry {
+  id: string;
+  count: number;
+  timestamp: Date;
+  type?: string;
+  alcoholContent?: number; // percentage
+  notes?: string;
 }
 
 export interface BloodPressureStats {
