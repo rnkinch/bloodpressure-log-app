@@ -76,7 +76,7 @@ export const analyzeTrends = (readings: BloodPressureReading[]): TrendAnalysis =
     riskLevel = 'moderate';
   }
 
-  const recommendations = generateRecommendations(systolicTrend, diastolicTrend, heartRateTrend, riskLevel);
+  const recommendations = generateRecommendations(systolicTrend, diastolicTrend, heartRateTrend, riskLevel, readings);
   const insights = generateInsights(systolicTrend, diastolicTrend, heartRateTrend, avgSystolic, avgDiastolic, readings);
 
   return {
@@ -111,7 +111,8 @@ const generateRecommendations = (
   systolicTrend: string,
   diastolicTrend: string,
   heartRateTrend: string,
-  riskLevel: string
+  riskLevel: string,
+  readings: BloodPressureReading[]
 ): string[] => {
   const recommendations: string[] = [];
   
@@ -131,6 +132,10 @@ const generateRecommendations = (
   if (systolicTrend === 'stable' && diastolicTrend === 'stable') {
     recommendations.push('Great job maintaining stable blood pressure!');
   }
+
+  // Lifestyle-based recommendations
+  const lifestyleInsights = generateLifestyleRecommendations(readings);
+  recommendations.push(...lifestyleInsights);
   
   if (recommendations.length === 0) {
     recommendations.push('Continue monitoring your blood pressure regularly');
@@ -178,6 +183,77 @@ const generateInsights = (
   insights.push(...timePatterns);
   
   return insights;
+};
+
+const generateLifestyleRecommendations = (readings: BloodPressureReading[]): string[] => {
+  const recommendations: string[] = [];
+  
+  if (readings.length === 0) {
+    return recommendations;
+  }
+
+  // Analyze cigar smoking patterns
+  const smokingReadings = readings.filter(r => r.cigarSmoking && r.cigarSmoking !== 'none');
+  const heavySmokingReadings = readings.filter(r => r.cigarSmoking === 'heavy');
+  const moderateSmokingReadings = readings.filter(r => r.cigarSmoking === 'moderate');
+
+  if (heavySmokingReadings.length > 0) {
+    const avgSystolic = heavySmokingReadings.reduce((sum, r) => sum + r.systolic, 0) / heavySmokingReadings.length;
+    const avgDiastolic = heavySmokingReadings.reduce((sum, r) => sum + r.diastolic, 0) / heavySmokingReadings.length;
+    
+    if (avgSystolic >= 130 || avgDiastolic >= 80) {
+      recommendations.push('Heavy cigar smoking may be contributing to elevated blood pressure. Consider reducing frequency or consulting with a healthcare provider about smoking cessation strategies.');
+    }
+  }
+
+  if (moderateSmokingReadings.length > 0) {
+    const avgSystolic = moderateSmokingReadings.reduce((sum, r) => sum + r.systolic, 0) / moderateSmokingReadings.length;
+    const avgDiastolic = moderateSmokingReadings.reduce((sum, r) => sum + r.diastolic, 0) / moderateSmokingReadings.length;
+    
+    if (avgSystolic >= 140 || avgDiastolic >= 90) {
+      recommendations.push('Moderate cigar smoking combined with high blood pressure readings suggests a potential correlation. Consider monitoring your blood pressure before and after smoking.');
+    }
+  }
+
+  // Analyze drinking patterns
+  const drinkingReadings = readings.filter(r => r.drinkingHabits && r.drinkingHabits !== 'none');
+  const heavyDrinkingReadings = readings.filter(r => r.drinkingHabits === 'heavy');
+  const moderateDrinkingReadings = readings.filter(r => r.drinkingHabits === 'moderate');
+
+  if (heavyDrinkingReadings.length > 0) {
+    const avgSystolic = heavyDrinkingReadings.reduce((sum, r) => sum + r.systolic, 0) / heavyDrinkingReadings.length;
+    const avgDiastolic = heavyDrinkingReadings.reduce((sum, r) => sum + r.diastolic, 0) / heavyDrinkingReadings.length;
+    
+    if (avgSystolic >= 130 || avgDiastolic >= 80) {
+      recommendations.push('Heavy alcohol consumption may be contributing to elevated blood pressure. Consider reducing alcohol intake and monitoring blood pressure changes.');
+    }
+  }
+
+  if (moderateDrinkingReadings.length > 0) {
+    const avgSystolic = moderateDrinkingReadings.reduce((sum, r) => sum + r.systolic, 0) / moderateDrinkingReadings.length;
+    const avgDiastolic = moderateDrinkingReadings.reduce((sum, r) => sum + r.diastolic, 0) / moderateDrinkingReadings.length;
+    
+    if (avgSystolic >= 140 || avgDiastolic >= 90) {
+      recommendations.push('Moderate alcohol consumption with high blood pressure readings suggests monitoring the relationship between drinking and your blood pressure.');
+    }
+  }
+
+  // Combined lifestyle analysis
+  const combinedLifestyleReadings = readings.filter(r => 
+    (r.cigarSmoking && r.cigarSmoking !== 'none') && 
+    (r.drinkingHabits && r.drinkingHabits !== 'none')
+  );
+
+  if (combinedLifestyleReadings.length > 0) {
+    const avgSystolic = combinedLifestyleReadings.reduce((sum, r) => sum + r.systolic, 0) / combinedLifestyleReadings.length;
+    const avgDiastolic = combinedLifestyleReadings.reduce((sum, r) => sum + r.diastolic, 0) / combinedLifestyleReadings.length;
+    
+    if (avgSystolic >= 130 || avgDiastolic >= 80) {
+      recommendations.push('The combination of smoking and drinking may be amplifying blood pressure effects. Consider addressing both lifestyle factors for optimal cardiovascular health.');
+    }
+  }
+
+  return recommendations;
 };
 
 export const prepareChartData = (readings: BloodPressureReading[]): ChartDataPoint[] => {

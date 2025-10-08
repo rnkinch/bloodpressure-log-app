@@ -23,7 +23,9 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
     timestamp: initialData?.timestamp 
       ? toLocalDateTimeString(initialData.timestamp)
       : getCurrentLocalDateTime(),
-    notes: initialData?.notes || ''
+    notes: initialData?.notes || '',
+    cigarSmoking: initialData?.cigarSmoking || 'none',
+    drinkingHabits: initialData?.drinkingHabits || 'none'
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -63,7 +65,9 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
       diastolic: Number(formData.diastolic),
       heartRate: Number(formData.heartRate),
       timestamp: fromLocalDateTimeString(formData.timestamp),
-      notes: formData.notes.trim() || undefined
+      notes: formData.notes.trim() || undefined,
+      cigarSmoking: formData.cigarSmoking as 'none' | 'light' | 'moderate' | 'heavy',
+      drinkingHabits: formData.drinkingHabits as 'none' | 'light' | 'moderate' | 'heavy'
     });
 
     // Reset form if not editing
@@ -73,7 +77,9 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
         diastolic: '',
         heartRate: '',
         timestamp: getCurrentLocalDateTime(),
-        notes: ''
+        notes: '',
+        cigarSmoking: 'none',
+        drinkingHabits: 'none'
       });
     }
   };
@@ -225,6 +231,40 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="Any additional notes about this reading..."
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cigar Smoking
+            </label>
+            <select
+              value={formData.cigarSmoking}
+              onChange={(e) => handleInputChange('cigarSmoking', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="none">None</option>
+              <option value="light">Light (1-2 cigars/week)</option>
+              <option value="moderate">Moderate (3-5 cigars/week)</option>
+              <option value="heavy">Heavy (6+ cigars/week)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Drinking Habits
+            </label>
+            <select
+              value={formData.drinkingHabits}
+              onChange={(e) => handleInputChange('drinkingHabits', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="none">None</option>
+              <option value="light">Light (1-2 drinks/week)</option>
+              <option value="moderate">Moderate (3-7 drinks/week)</option>
+              <option value="heavy">Heavy (8+ drinks/week)</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex gap-3 pt-4">

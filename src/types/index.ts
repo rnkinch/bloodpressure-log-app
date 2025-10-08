@@ -5,6 +5,8 @@ export interface BloodPressureReading {
   heartRate: number;
   timestamp: Date;
   notes?: string;
+  cigarSmoking?: 'none' | 'light' | 'moderate' | 'heavy';
+  drinkingHabits?: 'none' | 'light' | 'moderate' | 'heavy';
 }
 
 export interface BloodPressureStats {

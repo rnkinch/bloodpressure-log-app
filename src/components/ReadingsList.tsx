@@ -75,9 +75,27 @@ export const ReadingsList: React.FC<ReadingsListProps> = ({
                     {format(new Date(reading.timestamp), 'MMM dd, yyyy - h:mm a')}
                   </div>
                   
-                  {reading.notes && (
-                    <div className="mt-2 text-sm text-gray-600 italic">
-                      "{reading.notes}"
+                  {(reading.notes || reading.cigarSmoking !== 'none' || reading.drinkingHabits !== 'none') && (
+                    <div className="mt-2 space-y-1">
+                      {reading.notes && (
+                        <div className="text-sm text-gray-600 italic">
+                          "{reading.notes}"
+                        </div>
+                      )}
+                      {(reading.cigarSmoking !== 'none' || reading.drinkingHabits !== 'none') && (
+                        <div className="flex gap-2 text-xs">
+                          {reading.cigarSmoking !== 'none' && (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
+                              🚬 {reading.cigarSmoking}
+                            </span>
+                          )}
+                          {reading.drinkingHabits !== 'none' && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                              🍷 {reading.drinkingHabits}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
