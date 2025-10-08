@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
+import { useLifestyleData } from './hooks/useLifestyleData';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
@@ -16,13 +17,21 @@ type ViewMode = 'form' | 'chart' | 'analysis' | 'stats' | 'readings' | 'cigar' |
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
+  const { 
+    cigarEntries, 
+    drinkEntries, 
+    loading: lifestyleLoading,
+    addCigarEntry,
+    updateCigarEntry,
+    deleteCigarEntry,
+    addDrinkEntry,
+    updateDrinkEntry,
+    deleteDrinkEntry
+  } = useLifestyleData();
+  
   const [currentView, setCurrentView] = useState<ViewMode>('form');
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
-  
-  // Lifestyle data state
-  const [cigarEntries, setCigarEntries] = useState<any[]>([]);
-  const [drinkEntries, setDrinkEntries] = useState<any[]>([]);
   const [editingCigar, setEditingCigar] = useState<any>(null);
   const [editingDrink, setEditingDrink] = useState<any>(null);
   
@@ -74,10 +83,13 @@ function App() {
   };
 
   // Lifestyle handlers
-  const handleAddCigar = (cigar: any) => {
-    const newCigar = { ...cigar, id: Date.now().toString() };
-    setCigarEntries(prev => [newCigar, ...prev]);
-    setCurrentView('lifestyle');
+  const handleAddCigar = async (cigar: any) => {
+    try {
+      await addCigarEntry(cigar);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to add cigar entry:', error);
+    }
   };
 
   const handleEditCigar = (cigar: any) => {
@@ -85,14 +97,22 @@ function App() {
     setCurrentView('cigar');
   };
 
-  const handleUpdateCigar = (cigar: any) => {
-    setCigarEntries(prev => prev.map(c => c.id === editingCigar.id ? { ...cigar, id: editingCigar.id } : c));
-    setEditingCigar(null);
-    setCurrentView('lifestyle');
+  const handleUpdateCigar = async (cigar: any) => {
+    try {
+      await updateCigarEntry(editingCigar.id, cigar);
+      setEditingCigar(null);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to update cigar entry:', error);
+    }
   };
 
-  const handleDeleteCigar = (id: string) => {
-    setCigarEntries(prev => prev.filter(c => c.id !== id));
+  const handleDeleteCigar = async (id: string) => {
+    try {
+      await deleteCigarEntry(id);
+    } catch (error) {
+      console.error('Failed to delete cigar entry:', error);
+    }
   };
 
   const handleCancelCigarEdit = () => {
@@ -100,10 +120,13 @@ function App() {
     setCurrentView('lifestyle');
   };
 
-  const handleAddDrink = (drink: any) => {
-    const newDrink = { ...drink, id: Date.now().toString() };
-    setDrinkEntries(prev => [newDrink, ...prev]);
-    setCurrentView('lifestyle');
+  const handleAddDrink = async (drink: any) => {
+    try {
+      await addDrinkEntry(drink);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to add drink entry:', error);
+    }
   };
 
   const handleEditDrink = (drink: any) => {
@@ -111,14 +134,22 @@ function App() {
     setCurrentView('drink');
   };
 
-  const handleUpdateDrink = (drink: any) => {
-    setDrinkEntries(prev => prev.map(d => d.id === editingDrink.id ? { ...drink, id: editingDrink.id } : d));
-    setEditingDrink(null);
-    setCurrentView('lifestyle');
+  const handleUpdateDrink = async (drink: any) => {
+    try {
+      await updateDrinkEntry(editingDrink.id, drink);
+      setEditingDrink(null);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to update drink entry:', error);
+    }
   };
 
-  const handleDeleteDrink = (id: string) => {
-    setDrinkEntries(prev => prev.filter(d => d.id !== id));
+  const handleDeleteDrink = async (id: string) => {
+    try {
+      await deleteDrinkEntry(id);
+    } catch (error) {
+      console.error('Failed to delete drink entry:', error);
+    }
   };
 
   const handleCancelDrinkEdit = () => {
@@ -126,7 +157,7 @@ function App() {
     setCurrentView('lifestyle');
   };
 
-  if (loading) {
+  if (loading || lifestyleLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
