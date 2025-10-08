@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CigarEntry, DrinkEntry } from '../types';
+import { api } from '../utils/api';
 
 export const useLifestyleData = () => {
   const [cigarEntries, setCigarEntries] = useState<CigarEntry[]>([]);
