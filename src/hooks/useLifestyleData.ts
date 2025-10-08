@@ -7,30 +7,33 @@ export const useLifestyleData = () => {
   const [drinkEntries, setDrinkEntries] = useState<DrinkEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load lifestyle data from localStorage on mount
+  // Load lifestyle data from API on mount
   useEffect(() => {
-    const loadLifestyleData = () => {
+    const loadLifestyleData = async () => {
       try {
-        const savedCigars = localStorage.getItem('cigarEntries');
-        const savedDrinks = localStorage.getItem('drinkEntries');
+        console.log('Loading lifestyle data from API...');
+        const [cigars, drinks] = await Promise.all([
+          api.getCigarEntries(),
+          api.getDrinkEntries()
+        ]);
         
-        if (savedCigars) {
-          const cigars = JSON.parse(savedCigars).map((entry: any) => ({
-            ...entry,
-            timestamp: new Date(entry.timestamp)
-          }));
-          setCigarEntries(cigars);
-        }
+        console.log('Loaded cigars:', cigars);
+        console.log('Loaded drinks:', drinks);
         
-        if (savedDrinks) {
-          const drinks = JSON.parse(savedDrinks).map((entry: any) => ({
-            ...entry,
-            timestamp: new Date(entry.timestamp)
-          }));
-          setDrinkEntries(drinks);
-        }
+        // Convert timestamp strings back to Date objects
+        const cigarsWithDates = cigars.map(entry => ({
+          ...entry,
+          timestamp: new Date(entry.timestamp)
+        }));
+        const drinksWithDates = drinks.map(entry => ({
+          ...entry,
+          timestamp: new Date(entry.timestamp)
+        }));
+        
+        setCigarEntries(cigarsWithDates);
+        setDrinkEntries(drinksWithDates);
       } catch (error) {
-        console.error('Failed to load lifestyle data from localStorage:', error);
+        console.error('Failed to load lifestyle data from API:', error);
       } finally {
         setLoading(false);
       }
@@ -41,7 +44,9 @@ export const useLifestyleData = () => {
   // Cigar entry management
   const addCigarEntry = useCallback(async (entry: Omit<CigarEntry, 'id'>) => {
     try {
+      console.log('Adding cigar entry:', entry);
       const newEntry = await api.addCigarEntry(entry);
+      console.log('Added cigar entry:', newEntry);
       // Convert timestamp string to Date object
       const entryWithDate = {
         ...newEntry,
