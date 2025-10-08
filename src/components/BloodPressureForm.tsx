@@ -24,8 +24,23 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
       ? toLocalDateTimeString(initialData.timestamp)
       : getCurrentLocalDateTime(),
     notes: initialData?.notes || '',
-    cigarSmoking: initialData?.cigarSmoking || 'none',
-    drinkingHabits: initialData?.drinkingHabits || 'none'
+    // Cigar tracking
+    hasCigars: !!(initialData?.cigars?.count && initialData.cigars.count > 0),
+    cigarCount: initialData?.cigars?.count || 0,
+    cigarTimestamp: initialData?.cigars?.timestamp 
+      ? toLocalDateTimeString(initialData.cigars.timestamp)
+      : getCurrentLocalDateTime(),
+    cigarBrand: initialData?.cigars?.brand || '',
+    cigarNotes: initialData?.cigars?.notes || '',
+    // Drink tracking
+    hasDrinks: !!(initialData?.drinks?.count && initialData.drinks.count > 0),
+    drinkCount: initialData?.drinks?.count || 0,
+    drinkTimestamp: initialData?.drinks?.timestamp 
+      ? toLocalDateTimeString(initialData.drinks.timestamp)
+      : getCurrentLocalDateTime(),
+    drinkType: initialData?.drinks?.type || '',
+    alcoholContent: initialData?.drinks?.alcoholContent || '',
+    drinkNotes: initialData?.drinks?.notes || ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,15 +75,36 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
       return;
     }
 
-    onSubmit({
+    const readingData: Omit<BloodPressureReading, 'id'> = {
       systolic: Number(formData.systolic),
       diastolic: Number(formData.diastolic),
       heartRate: Number(formData.heartRate),
       timestamp: fromLocalDateTimeString(formData.timestamp),
-      notes: formData.notes.trim() || undefined,
-      cigarSmoking: formData.cigarSmoking as 'none' | 'light' | 'moderate' | 'heavy',
-      drinkingHabits: formData.drinkingHabits as 'none' | 'light' | 'moderate' | 'heavy'
-    });
+      notes: formData.notes.trim() || undefined
+    };
+
+    // Add cigar data if specified
+    if (formData.hasCigars && formData.cigarCount > 0) {
+      readingData.cigars = {
+        count: Number(formData.cigarCount),
+        timestamp: fromLocalDateTimeString(formData.cigarTimestamp),
+        brand: formData.cigarBrand.trim() || undefined,
+        notes: formData.cigarNotes.trim() || undefined
+      };
+    }
+
+    // Add drink data if specified
+    if (formData.hasDrinks && formData.drinkCount > 0) {
+      readingData.drinks = {
+        count: Number(formData.drinkCount),
+        timestamp: fromLocalDateTimeString(formData.drinkTimestamp),
+        type: formData.drinkType.trim() || undefined,
+        alcoholContent: formData.alcoholContent ? Number(formData.alcoholContent) : undefined,
+        notes: formData.drinkNotes.trim() || undefined
+      };
+    }
+
+    onSubmit(readingData);
 
     // Reset form if not editing
     if (!isEditing) {
@@ -78,8 +114,17 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
         heartRate: '',
         timestamp: getCurrentLocalDateTime(),
         notes: '',
-        cigarSmoking: 'none',
-        drinkingHabits: 'none'
+        hasCigars: false,
+        cigarCount: 0,
+        cigarTimestamp: getCurrentLocalDateTime(),
+        cigarBrand: '',
+        cigarNotes: '',
+        hasDrinks: false,
+        drinkCount: 0,
+        drinkTimestamp: getCurrentLocalDateTime(),
+        drinkType: '',
+        alcoholContent: '',
+        drinkNotes: ''
       });
     }
   };
@@ -233,38 +278,163 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cigar Smoking
+        {/* Cigar Tracking */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <input
+              type="checkbox"
+              id="hasCigars"
+              checked={formData.hasCigars}
+              onChange={(e) => handleInputChange('hasCigars', e.target.checked.toString())}
+              className="mr-2"
+            />
+            <label htmlFor="hasCigars" className="text-sm font-medium text-gray-700">
+              🚬 Had cigars today
             </label>
-            <select
-              value={formData.cigarSmoking}
-              onChange={(e) => handleInputChange('cigarSmoking', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="none">None</option>
-              <option value="light">Light (1-2 cigars/week)</option>
-              <option value="moderate">Moderate (3-5 cigars/week)</option>
-              <option value="heavy">Heavy (6+ cigars/week)</option>
-            </select>
           </div>
+          
+          {formData.hasCigars && (
+            <div className="space-y-3 ml-6">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Number of cigars
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.cigarCount}
+                    onChange={(e) => handleInputChange('cigarCount', e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    When
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.cigarTimestamp}
+                    onChange={(e) => handleInputChange('cigarTimestamp', e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Brand/Type (optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.cigarBrand}
+                  onChange={(e) => handleInputChange('cigarBrand', e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="e.g., Cohiba, Montecristo"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Notes (optional)
+                </label>
+                <textarea
+                  value={formData.cigarNotes}
+                  onChange={(e) => handleInputChange('cigarNotes', e.target.value)}
+                  rows={2}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Any notes about the cigars..."
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Drinking Habits
+        {/* Drink Tracking */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center mb-3">
+            <input
+              type="checkbox"
+              id="hasDrinks"
+              checked={formData.hasDrinks}
+              onChange={(e) => handleInputChange('hasDrinks', e.target.checked.toString())}
+              className="mr-2"
+            />
+            <label htmlFor="hasDrinks" className="text-sm font-medium text-gray-700">
+              🍷 Had drinks today
             </label>
-            <select
-              value={formData.drinkingHabits}
-              onChange={(e) => handleInputChange('drinkingHabits', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="none">None</option>
-              <option value="light">Light (1-2 drinks/week)</option>
-              <option value="moderate">Moderate (3-7 drinks/week)</option>
-              <option value="heavy">Heavy (8+ drinks/week)</option>
-            </select>
           </div>
+          
+          {formData.hasDrinks && (
+            <div className="space-y-3 ml-6">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Number of drinks
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={formData.drinkCount}
+                    onChange={(e) => handleInputChange('drinkCount', e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    When
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.drinkTimestamp}
+                    onChange={(e) => handleInputChange('drinkTimestamp', e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Alcohol % (optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={formData.alcoholContent}
+                    onChange={(e) => handleInputChange('alcoholContent', e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="12.5"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Type of drink (optional)
+                </label>
+                <input
+                  type="text"
+                  value={formData.drinkType}
+                  onChange={(e) => handleInputChange('drinkType', e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="e.g., Wine, Beer, Whiskey"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Notes (optional)
+                </label>
+                <textarea
+                  value={formData.drinkNotes}
+                  onChange={(e) => handleInputChange('drinkNotes', e.target.value)}
+                  rows={2}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Any notes about the drinks..."
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 pt-4">
