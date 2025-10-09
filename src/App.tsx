@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
+import { DrinkEntry } from './types';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
@@ -33,7 +34,7 @@ function App() {
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
-  const [editingDrink, setEditingDrink] = useState<any>(null);
+  const [editingDrink, setEditingDrink] = useState<DrinkEntry | null>(null);
   
   const filteredChartData = useMemo(() => {
     const now = new Date();
@@ -129,12 +130,15 @@ function App() {
     }
   };
 
-  const handleEditDrink = (drink: any) => {
+  const handleEditDrink = (drink: DrinkEntry) => {
+    console.log('App - handleEditDrink called with:', drink);
     setEditingDrink(drink);
     setCurrentView('drink');
   };
 
   const handleUpdateDrink = async (drink: any) => {
+    if (!editingDrink) return;
+    
     try {
       await updateDrinkEntry(editingDrink.id, drink);
       setEditingDrink(null);
@@ -283,12 +287,23 @@ function App() {
 
         {currentView === 'drink' && (
           <div className="max-w-2xl mx-auto">
-            <DrinkForm
-              onSubmit={editingDrink ? handleUpdateDrink : handleAddDrink}
-              onCancel={editingDrink ? handleCancelDrinkEdit : undefined}
-              initialData={editingDrink}
-              isEditing={!!editingDrink}
-            />
+            {editingDrink ? (
+              <DrinkForm
+                key={editingDrink.id}
+                onSubmit={handleUpdateDrink}
+                onCancel={handleCancelDrinkEdit}
+                initialData={editingDrink}
+                isEditing={true}
+              />
+            ) : (
+              <DrinkForm
+                key="new"
+                onSubmit={handleAddDrink}
+                onCancel={undefined}
+                initialData={undefined}
+                isEditing={false}
+              />
+            )}
           </div>
         )}
 

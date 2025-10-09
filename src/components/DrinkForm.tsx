@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DrinkEntry } from '../types';
 import { Wine, Calendar, Plus } from 'lucide-react';
 import { toLocalDateTimeString, fromLocalDateTimeString, getCurrentLocalDateTime, getTimeAgo } from '../utils/timezone';
@@ -16,17 +16,38 @@ export const DrinkForm: React.FC<DrinkFormProps> = ({
   initialData,
   isEditing = false
 }) => {
-  const [formData, setFormData] = useState({
-    count: initialData?.count || 1,
-    timestamp: initialData?.timestamp 
-      ? toLocalDateTimeString(initialData.timestamp)
-      : getCurrentLocalDateTime(),
-    type: initialData?.type || '',
-    alcoholContent: initialData?.alcoholContent || '',
-    notes: initialData?.notes || ''
+  const [formData, setFormData] = useState(() => {
+    console.log('DrinkForm - initializing with initialData:', initialData);
+    return {
+      count: initialData?.count || 1,
+      timestamp: initialData?.timestamp 
+        ? toLocalDateTimeString(initialData.timestamp)
+        : getCurrentLocalDateTime(),
+      type: initialData?.type || '',
+      alcoholContent: initialData?.alcoholContent || '',
+      notes: initialData?.notes || ''
+    };
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update form when initialData changes (for editing)
+  useEffect(() => {
+    console.log('DrinkForm - initialData changed:', initialData);
+    if (initialData) {
+      const newFormData = {
+        count: initialData.count || 1,
+        timestamp: initialData.timestamp 
+          ? toLocalDateTimeString(initialData.timestamp)
+          : getCurrentLocalDateTime(),
+        type: initialData.type || '',
+        alcoholContent: initialData.alcoholContent || '',
+        notes: initialData.notes || ''
+      };
+      console.log('DrinkForm - setting formData to:', newFormData);
+      setFormData(newFormData);
+    }
+  }, [initialData]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};

@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const path = require('path');
 
@@ -16,206 +16,181 @@ app.use(express.static(path.join(__dirname, '../build')));
 const dbPath = process.env.NODE_ENV === 'production' 
   ? '/app/data/bloodpressure.db' 
   : './bloodpressure.db';
-const db = new sqlite3.Database(dbPath);
+const db = new Database(dbPath);
 
 // Create tables if they don't exist
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS readings (
-    id TEXT PRIMARY KEY,
-    systolic INTEGER NOT NULL,
-    diastolic INTEGER NOT NULL,
-    heartRate INTEGER NOT NULL,
-    timestamp TEXT NOT NULL,
-    notes TEXT
-  )`);
-  
-  db.run(`CREATE TABLE IF NOT EXISTS cigars (
-    id TEXT PRIMARY KEY,
-    count INTEGER NOT NULL,
-    timestamp TEXT NOT NULL,
-    brand TEXT,
-    notes TEXT
-  )`);
-  
-  db.run(`CREATE TABLE IF NOT EXISTS drinks (
-    id TEXT PRIMARY KEY,
-    count INTEGER NOT NULL,
-    timestamp TEXT NOT NULL,
-    type TEXT,
-    alcoholContent REAL,
-    notes TEXT
-  )`);
-});
+db.exec(`CREATE TABLE IF NOT EXISTS readings (
+  id TEXT PRIMARY KEY,
+  systolic INTEGER NOT NULL,
+  diastolic INTEGER NOT NULL,
+  heartRate INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
+  notes TEXT
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS cigars (
+  id TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
+  brand TEXT,
+  notes TEXT
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS drinks (
+  id TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
+  type TEXT,
+  alcoholContent REAL,
+  notes TEXT
+)`);
+
+// Prepare statements for better performance
+const getReadings = db.prepare('SELECT * FROM readings ORDER BY timestamp DESC');
+const insertReading = db.prepare('INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes) VALUES (?, ?, ?, ?, ?, ?)');
+const updateReading = db.prepare('UPDATE readings SET systolic = ?, diastolic = ?, heartRate = ?, timestamp = ?, notes = ? WHERE id = ?');
+const deleteReading = db.prepare('DELETE FROM readings WHERE id = ?');
+
+const getCigars = db.prepare('SELECT * FROM cigars ORDER BY timestamp DESC');
+const insertCigar = db.prepare('INSERT INTO cigars (id, count, timestamp, brand, notes) VALUES (?, ?, ?, ?, ?)');
+const updateCigar = db.prepare('UPDATE cigars SET count = ?, timestamp = ?, brand = ?, notes = ? WHERE id = ?');
+const deleteCigar = db.prepare('DELETE FROM cigars WHERE id = ?');
+
+const getDrinks = db.prepare('SELECT * FROM drinks ORDER BY timestamp DESC');
+const insertDrink = db.prepare('INSERT INTO drinks (id, count, timestamp, type, alcoholContent, notes) VALUES (?, ?, ?, ?, ?, ?)');
+const updateDrink = db.prepare('UPDATE drinks SET count = ?, timestamp = ?, type = ?, alcoholContent = ?, notes = ? WHERE id = ?');
+const deleteDrink = db.prepare('DELETE FROM drinks WHERE id = ?');
 
 // API Routes
 app.get('/api/readings', (req, res) => {
-  db.all('SELECT * FROM readings ORDER BY timestamp DESC', (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const rows = getReadings.all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/readings', (req, res) => {
-  const { systolic, diastolic, heartRate, timestamp, notes } = req.body;
-  const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
-  
-  db.run(
-    'INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, systolic, diastolic, heartRate, timestamp, notes],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id, systolic, diastolic, heartRate, timestamp, notes });
-    }
-  );
+  try {
+    const { systolic, diastolic, heartRate, timestamp, notes } = req.body;
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
+    
+    insertReading.run(id, systolic, diastolic, heartRate, timestamp, notes);
+    res.json({ id, systolic, diastolic, heartRate, timestamp, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/api/readings/:id', (req, res) => {
-  const { id } = req.params;
-  const { systolic, diastolic, heartRate, timestamp, notes } = req.body;
-  
-  db.run(
-    'UPDATE readings SET systolic = ?, diastolic = ?, heartRate = ?, timestamp = ?, notes = ? WHERE id = ?',
-    [systolic, diastolic, heartRate, timestamp, notes, id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id, systolic, diastolic, heartRate, timestamp, notes });
-    }
-  );
+  try {
+    const { id } = req.params;
+    const { systolic, diastolic, heartRate, timestamp, notes } = req.body;
+    
+    updateReading.run(systolic, diastolic, heartRate, timestamp, notes, id);
+    res.json({ id, systolic, diastolic, heartRate, timestamp, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/readings/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM readings WHERE id = ?', [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const { id } = req.params;
+    deleteReading.run(id);
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Cigar endpoints
 app.get('/api/cigars', (req, res) => {
-  db.all('SELECT * FROM cigars ORDER BY timestamp DESC', (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const rows = getCigars.all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/cigars', (req, res) => {
-  const { count, timestamp, brand, notes } = req.body;
-  const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
-  
-  db.run(
-    'INSERT INTO cigars (id, count, timestamp, brand, notes) VALUES (?, ?, ?, ?, ?)',
-    [id, count, timestamp, brand, notes],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id, count, timestamp, brand, notes });
-    }
-  );
+  try {
+    const { count, timestamp, brand, notes } = req.body;
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
+    
+    insertCigar.run(id, count, timestamp, brand, notes);
+    res.json({ id, count, timestamp, brand, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/api/cigars/:id', (req, res) => {
-  const { id } = req.params;
-  const { count, timestamp, brand, notes } = req.body;
-  
-  db.run(
-    'UPDATE cigars SET count = ?, timestamp = ?, brand = ?, notes = ? WHERE id = ?',
-    [count, timestamp, brand, notes, id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id, count, timestamp, brand, notes });
-    }
-  );
+  try {
+    const { id } = req.params;
+    const { count, timestamp, brand, notes } = req.body;
+    
+    updateCigar.run(count, timestamp, brand, notes, id);
+    res.json({ id, count, timestamp, brand, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/cigars/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM cigars WHERE id = ?', [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const { id } = req.params;
+    deleteCigar.run(id);
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Drink endpoints
 app.get('/api/drinks', (req, res) => {
-  db.all('SELECT * FROM drinks ORDER BY timestamp DESC', (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const rows = getDrinks.all();
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/drinks', (req, res) => {
-  const { count, timestamp, type, alcoholContent, notes } = req.body;
-  const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
-  
-  db.run(
-    'INSERT INTO drinks (id, count, timestamp, type, alcoholContent, notes) VALUES (?, ?, ?, ?, ?, ?)',
-    [id, count, timestamp, type, alcoholContent, notes],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id, count, timestamp, type, alcoholContent, notes });
-    }
-  );
+  try {
+    const { count, timestamp, type, alcoholContent, notes } = req.body;
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
+    
+    insertDrink.run(id, count, timestamp, type, alcoholContent, notes);
+    res.json({ id, count, timestamp, type, alcoholContent, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.put('/api/drinks/:id', (req, res) => {
-  const { id } = req.params;
-  const { count, timestamp, type, alcoholContent, notes } = req.body;
-  
-  db.run(
-    'UPDATE drinks SET count = ?, timestamp = ?, type = ?, alcoholContent = ?, notes = ? WHERE id = ?',
-    [count, timestamp, type, alcoholContent, notes, id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id, count, timestamp, type, alcoholContent, notes });
-    }
-  );
+  try {
+    const { id } = req.params;
+    const { count, timestamp, type, alcoholContent, notes } = req.body;
+    
+    updateDrink.run(count, timestamp, type, alcoholContent, notes, id);
+    res.json({ id, count, timestamp, type, alcoholContent, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/drinks/:id', (req, res) => {
-  const { id } = req.params;
-  
-  db.run('DELETE FROM drinks WHERE id = ?', [id], function(err) {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
+  try {
+    const { id } = req.params;
+    deleteDrink.run(id);
     res.json({ success: true });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Serve React app
