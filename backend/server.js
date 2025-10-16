@@ -3,9 +3,13 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const path = require('path');
+const AIAnalysisService = require('./services/aiAnalysisService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize AI Analysis Service
+const aiAnalysisService = new AIAnalysisService();
 
 // Middleware
 app.use(cors());
@@ -190,6 +194,98 @@ app.delete('/api/drinks/:id', (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// AI Analysis endpoint
+app.get('/api/analysis/advanced', async (req, res) => {
+  try {
+    console.log('AI Analysis endpoint called');
+    
+    const readings = getReadings.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    console.log(`Found ${readings.length} readings`);
+    
+    const cigarEntries = getCigars.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const drinkEntries = getDrinks.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
+    console.log(`Found ${cigarEntries.length} cigar entries, ${drinkEntries.length} drink entries`);
+
+    const analysis = await aiAnalysisService.generateAdvancedAnalysis(
+      readings, 
+      cigarEntries, 
+      drinkEntries
+    );
+
+    console.log('Analysis generated successfully');
+    res.json(analysis);
+  } catch (err) {
+    console.error('AI Analysis error:', err);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ 
+      error: 'Failed to generate AI analysis', 
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
+// Health check endpoint for AI service
+app.get('/api/analysis/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    service: 'AI Analysis Service',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Debug endpoint to test AI service
+app.get('/api/analysis/debug', async (req, res) => {
+  try {
+    const testReadings = [
+      {
+        id: '1',
+        systolic: 120,
+        diastolic: 80,
+        heartRate: 72,
+        timestamp: new Date('2024-01-01T08:00:00Z')
+      },
+      {
+        id: '2',
+        systolic: 125,
+        diastolic: 82,
+        heartRate: 75,
+        timestamp: new Date('2024-01-02T08:00:00Z')
+      }
+    ];
+
+    const analysis = await aiAnalysisService.generateAdvancedAnalysis(testReadings, [], []);
+    res.json({ 
+      status: 'success', 
+      message: 'AI service working',
+      analysis: {
+        riskAssessment: analysis.riskAssessment?.overall || 'N/A',
+        dataQuality: analysis.dataQuality?.quality || 'N/A',
+        confidenceScore: analysis.confidenceScore || 'N/A'
+      }
+    });
+  } catch (error) {
+    console.error('AI Debug Error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: error.message,
+      stack: error.stack
+    });
   }
 });
 

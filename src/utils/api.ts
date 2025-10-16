@@ -143,4 +143,21 @@ export const api = {
       throw new Error('Failed to delete drink entry');
     }
   },
+
+  // AI Analysis
+  getAdvancedAnalysis: async (): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/api/analysis/advanced`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch advanced AI analysis');
+    }
+    return response.json();
+  },
+
+  checkAIServiceHealth: async (): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/api/analysis/health`);
+    if (!response.ok) {
+      throw new Error('AI service health check failed');
+    }
+    return response.json();
+  },
 };
