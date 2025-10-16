@@ -80,3 +80,86 @@ textarea:focus {
 .spinner {
   @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide unnecessary elements */
+  header,
+  nav,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset page styles */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .page-break-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Print report specific styles */
+  .print-report {
+    max-width: 100% !important;
+    padding: 0.5in !important;
+  }
+
+  .print-header {
+    margin-bottom: 0.3in !important;
+  }
+
+  .print-section {
+    margin-bottom: 0.2in !important;
+  }
+
+  /* Table styling for print */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  table th,
+  table td {
+    border: 1px solid #000 !important;
+    padding: 4px 8px !important;
+  }
+
+  table thead {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure colors print correctly */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Font sizes for print */
+  .print-report h1 {
+    font-size: 20pt !important;
+  }
+
+  .print-report h2 {
+    font-size: 14pt !important;
+  }
+
+  .print-report p,
+  .print-report td,
+  .print-report th {
+    font-size: 10pt !important;
+  }
+}
