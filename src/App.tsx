@@ -5,7 +5,7 @@ import { DrinkEntry } from './types';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
-import { EnhancedAIAnalysis } from './components/EnhancedAIAnalysis';
+import EnhancedAIFeatures from './components/EnhancedAIFeatures';
 import { BloodPressureStatsComponent } from './components/BloodPressureStats';
 import { ReadingsList } from './components/ReadingsList';
 import { CigarForm } from './components/CigarForm';
@@ -13,10 +13,10 @@ import { DrinkForm } from './components/DrinkForm';
 import { LifestyleEntriesList } from './components/LifestyleEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Printer } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Printer, Zap } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'analysis' | 'stats' | 'readings' | 'cigar' | 'drink' | 'lifestyle' | 'print';
+type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'lifestyle' | 'print';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
@@ -204,7 +204,7 @@ function App() {
               { id: 'form', label: 'Add Reading', icon: Plus },
               { id: 'readings', label: 'All Readings', icon: List },
               { id: 'chart', label: 'Charts', icon: BarChart3 },
-              { id: 'analysis', label: 'AI Analysis', icon: Brain },
+              { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
               { id: 'stats', label: 'Statistics', icon: Activity },
               { id: 'lifestyle', label: 'Lifestyle', icon: Cigarette },
               { id: 'print', label: 'Print Report', icon: Printer }
@@ -249,9 +249,9 @@ function App() {
           </div>
         )}
 
-        {currentView === 'analysis' && (
+        {currentView === 'ai-assistant' && (
           <div className="max-w-6xl mx-auto">
-            <EnhancedAIAnalysis />
+            <EnhancedAIFeatures />
           </div>
         )}
 

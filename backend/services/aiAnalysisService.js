@@ -1,6 +1,9 @@
+const HuggingFaceService = require('./huggingFaceService');
+
 class AIAnalysisService {
   constructor() {
     this.medicalKnowledgeBase = this.initializeMedicalKnowledgeBase();
+    this.huggingFaceService = new HuggingFaceService();
   }
 
   // Utility functions
@@ -771,6 +774,115 @@ class AIAnalysisService {
     }
     
     return recommendations;
+  }
+
+  // New Hugging Face enhanced methods
+  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = []) {
+    // Generate the existing statistical analysis
+    const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries);
+    
+    try {
+      // Enhance with Hugging Face insights
+      const llmInsights = await this.huggingFaceService.generateInsights(baseAnalysis);
+      const llmRecommendations = await this.huggingFaceService.generateRecommendations(
+        baseAnalysis.riskAssessment, 
+        baseAnalysis.lifestyleCorrelation
+      );
+
+      // Combine the analysis
+      return {
+        ...baseAnalysis,
+        llmInsights: llmInsights,
+        llmRecommendations: llmRecommendations,
+        enhanced: true,
+        enhancementTimestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error enhancing analysis with Hugging Face:', error);
+      // Return base analysis if enhancement fails
+      return {
+        ...baseAnalysis,
+        llmInsights: { insights: 'AI enhancement temporarily unavailable', source: 'error' },
+        llmRecommendations: { recommendations: [], source: 'error' },
+        enhanced: false,
+        enhancementError: error.message
+      };
+    }
+  }
+
+  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = []) {
+    try {
+      const userData = {
+        readings: readings,
+        cigars: cigarEntries,
+        drinks: drinkEntries
+      };
+
+      const answer = await this.huggingFaceService.answerQuestion(question, userData);
+      
+      return {
+        question: question,
+        answer: answer,
+        timestamp: new Date().toISOString(),
+        context: {
+          totalReadings: readings.length,
+          recentAverage: readings.length > 0 ? {
+            systolic: this.mean(readings.slice(-5).map(r => r.systolic)),
+            diastolic: this.mean(readings.slice(-5).map(r => r.diastolic))
+          } : null
+        }
+      };
+    } catch (error) {
+      console.error('Error answering user question:', error);
+      return {
+        question: question,
+        answer: {
+          answer: 'I apologize, but I encountered an error while processing your question. Please try again or consult with a healthcare provider for medical advice.',
+          source: 'error'
+        },
+        timestamp: new Date().toISOString(),
+        error: error.message
+      };
+    }
+  }
+
+  async generateHealthReport(readings, cigarEntries = [], drinkEntries = []) {
+    try {
+      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries);
+      
+      const reportPrompt = this.createHealthReportPrompt(analysis);
+      const report = await this.huggingFaceService.callHuggingFaceAPI(reportPrompt);
+      
+      return {
+        report: report,
+        analysis: analysis,
+        generatedAt: new Date().toISOString(),
+        period: {
+          start: readings.length > 0 ? readings[readings.length - 1].timestamp : null,
+          end: readings.length > 0 ? readings[0].timestamp : null,
+          totalReadings: readings.length
+        }
+      };
+    } catch (error) {
+      console.error('Error generating health report:', error);
+      return {
+        report: 'Unable to generate comprehensive health report at this time.',
+        analysis: await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries),
+        generatedAt: new Date().toISOString(),
+        error: error.message
+      };
+    }
+  }
+
+  createHealthReportPrompt(analysis) {
+    return `Generate a comprehensive health report based on this blood pressure analysis:
+
+Risk Assessment: ${analysis.riskAssessment?.overall || 'unknown'}
+Trend Analysis: ${analysis.trendAnalysis?.systolic?.direction || 'stable'}
+Data Quality: ${analysis.dataQuality?.quality || 'unknown'}
+Confidence Score: ${analysis.confidenceScore || 0}
+
+Create a detailed, professional health report summarizing the findings and recommendations:`;
   }
 }
 

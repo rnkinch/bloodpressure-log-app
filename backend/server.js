@@ -240,6 +240,173 @@ app.get('/api/analysis/advanced', async (req, res) => {
   }
 });
 
+// Enhanced AI Analysis endpoint with Hugging Face
+app.get('/api/analysis/enhanced', async (req, res) => {
+  try {
+    console.log('Enhanced AI Analysis endpoint called');
+    
+    const readings = getReadings.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const cigarEntries = getCigars.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const drinkEntries = getDrinks.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
+    const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
+      readings, 
+      cigarEntries, 
+      drinkEntries
+    );
+
+    console.log('Enhanced analysis generated successfully');
+    res.json(enhancedAnalysis);
+  } catch (err) {
+    console.error('Enhanced AI Analysis error:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate enhanced AI analysis', 
+      details: err.message
+    });
+  }
+});
+
+// Enhanced AI Analysis endpoint with API key from frontend
+app.post('/api/analysis/enhanced', async (req, res) => {
+  try {
+    console.log('Enhanced AI Analysis endpoint called with API key');
+    
+    const { apiKey } = req.body;
+    
+    // Set the API key for this request
+    if (apiKey) {
+      aiAnalysisService.huggingFaceService.setApiKey(apiKey);
+    }
+    
+    const readings = getReadings.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const cigarEntries = getCigars.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const drinkEntries = getDrinks.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
+    const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
+      readings, 
+      cigarEntries, 
+      drinkEntries
+    );
+
+    console.log('Enhanced analysis generated successfully');
+    res.json(enhancedAnalysis);
+  } catch (err) {
+    console.error('Enhanced AI Analysis error:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate enhanced AI analysis', 
+      details: err.message
+    });
+  }
+});
+
+// AI Q&A endpoint
+app.post('/api/analysis/ask', async (req, res) => {
+  try {
+    const { question, apiKey } = req.body;
+    
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
+
+    // Set the API key for this request
+    if (apiKey) {
+      aiAnalysisService.huggingFaceService.setApiKey(apiKey);
+    }
+
+    console.log('AI Q&A endpoint called with question:', question);
+    
+    const readings = getReadings.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const cigarEntries = getCigars.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const drinkEntries = getDrinks.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
+    const answer = await aiAnalysisService.answerUserQuestion(
+      question,
+      readings, 
+      cigarEntries, 
+      drinkEntries
+    );
+
+    console.log('AI Q&A response generated successfully');
+    res.json(answer);
+  } catch (err) {
+    console.error('AI Q&A error:', err);
+    res.status(500).json({ 
+      error: 'Failed to process question', 
+      details: err.message
+    });
+  }
+});
+
+// Health Report endpoint
+app.get('/api/analysis/report', async (req, res) => {
+  try {
+    console.log('Health Report endpoint called');
+    
+    const readings = getReadings.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const cigarEntries = getCigars.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+    
+    const drinkEntries = getDrinks.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
+    const report = await aiAnalysisService.generateHealthReport(
+      readings, 
+      cigarEntries, 
+      drinkEntries
+    );
+
+    console.log('Health report generated successfully');
+    res.json(report);
+  } catch (err) {
+    console.error('Health Report error:', err);
+    res.status(500).json({ 
+      error: 'Failed to generate health report', 
+      details: err.message
+    });
+  }
+});
+
 // Health check endpoint for AI service
 app.get('/api/analysis/health', (req, res) => {
   res.json({ 
@@ -287,6 +454,28 @@ app.get('/api/analysis/debug', async (req, res) => {
       stack: error.stack
     });
   }
+});
+
+// API key validation endpoint
+app.post('/api/analysis/test-key', (req, res) => {
+  console.log('API key validation request received');
+  const { apiKey } = req.body;
+  console.log('API key received:', apiKey ? 'present' : 'missing');
+  
+  if (!apiKey) {
+    console.log('No API key provided');
+    return res.status(400).json({ valid: false, error: 'API key is required' });
+  }
+
+  // Validate API key format first
+  if (!apiKey.startsWith('hf_') || apiKey.length < 20) {
+    console.log('Invalid API key format');
+    return res.json({ valid: false, error: 'Invalid API key format. Hugging Face keys start with "hf_" and are longer.' });
+  }
+
+  // For now, just validate the format - the actual API will be tested when used
+  console.log('API key format is valid');
+  return res.json({ valid: true, message: 'API key format is valid. You can now use enhanced AI features!' });
 });
 
 // Serve React app
