@@ -321,7 +321,8 @@ const analyzeLifestyleTiming = (readings: BloodPressureReading[]): string[] => {
 export const prepareChartData = (
   readings: BloodPressureReading[], 
   cigarEntries: any[] = [], 
-  drinkEntries: any[] = []
+  drinkEntries: any[] = [],
+  weightEntries: any[] = []
 ): ChartDataPoint[] => {
   return readings
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
@@ -337,12 +338,16 @@ export const prepareChartData = (
       const sameDayDrinks = drinkEntries.filter(entry => 
         new Date(entry.timestamp).toDateString() === readingDate.toDateString()
       );
+      const sameDayWeights = weightEntries.filter(entry => 
+        new Date(entry.timestamp).toDateString() === readingDate.toDateString()
+      );
       
       const totalCigars = sameDayCigars.reduce((sum, entry) => sum + entry.count, 0);
       const totalDrinks = sameDayDrinks.reduce((sum, entry) => sum + entry.count, 0);
       const avgAlcoholContent = sameDayDrinks.length > 0 
         ? sameDayDrinks.reduce((sum, entry) => sum + (entry.alcoholContent || 0), 0) / sameDayDrinks.length 
         : 0;
+      const latestWeight = sameDayWeights.length > 0 ? sameDayWeights[sameDayWeights.length - 1].weight : undefined;
 
       return {
         date: format(localDate, 'MMM dd'),
@@ -350,10 +355,11 @@ export const prepareChartData = (
         diastolic: reading.diastolic,
         heartRate: reading.heartRate,
         timestamp: reading.timestamp.getTime(),
-        lifestyle: (totalCigars > 0 || totalDrinks > 0) ? {
+        lifestyle: (totalCigars > 0 || totalDrinks > 0 || latestWeight !== undefined) ? {
           cigars: totalCigars,
           drinks: totalDrinks,
-          alcoholContent: avgAlcoholContent
+          alcoholContent: avgAlcoholContent,
+          weight: latestWeight
         } : undefined
       };
     });

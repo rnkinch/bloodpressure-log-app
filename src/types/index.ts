@@ -24,6 +24,13 @@ export interface DrinkEntry {
   notes?: string;
 }
 
+export interface WeightEntry {
+  id: string;
+  weight: number;
+  timestamp: Date;
+  notes?: string;
+}
+
 export interface BloodPressureStats {
   averageSystolic: number;
   averageDiastolic: number;
@@ -55,6 +62,7 @@ export interface ChartDataPoint {
     cigars?: number;
     drinks?: number;
     alcoholContent?: number;
+    weight?: number;
   };
 }
 

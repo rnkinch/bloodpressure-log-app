@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
-import { DrinkEntry } from './types';
+import { useWeightData } from './hooks/useWeightData';
+import { DrinkEntry, WeightEntry } from './types';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
@@ -10,13 +11,15 @@ import { BloodPressureStatsComponent } from './components/BloodPressureStats';
 import { ReadingsList } from './components/ReadingsList';
 import { CigarForm } from './components/CigarForm';
 import { DrinkForm } from './components/DrinkForm';
+import { WeightForm } from './components/WeightForm';
 import { LifestyleEntriesList } from './components/LifestyleEntriesList';
+import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Printer, Zap } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, Zap } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'lifestyle' | 'print';
+type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
@@ -32,11 +35,20 @@ function App() {
     deleteDrinkEntry
   } = useLifestyleData();
   
+  const {
+    weightEntries,
+    loading: weightLoading,
+    addWeightEntry,
+    updateWeightEntry,
+    deleteWeightEntry
+  } = useWeightData();
+  
   const [currentView, setCurrentView] = useState<ViewMode>('form');
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
   const [editingDrink, setEditingDrink] = useState<DrinkEntry | null>(null);
+  const [editingWeight, setEditingWeight] = useState<WeightEntry | null>(null);
   
   const filteredChartData = useMemo(() => {
     const now = new Date();
@@ -50,8 +62,8 @@ function App() {
       filtered = readings.filter(r => r.timestamp >= monthAgo);
     }
     
-    return prepareChartData(filtered, cigarEntries, drinkEntries);
-  }, [readings, chartPeriod, cigarEntries, drinkEntries]);
+    return prepareChartData(filtered, cigarEntries, drinkEntries, weightEntries);
+  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries]);
 
   const stats = useMemo(() => calculateStats(readings, chartPeriod), [readings, chartPeriod]);
   const analysis = useMemo(() => analyzeTrends(readings, cigarEntries, drinkEntries), [readings, cigarEntries, drinkEntries]);
@@ -163,7 +175,47 @@ function App() {
     setCurrentView('lifestyle');
   };
 
-  if (loading || lifestyleLoading) {
+  // Weight handlers
+  const handleAddWeight = async (weight: any) => {
+    try {
+      await addWeightEntry(weight);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to add weight entry:', error);
+    }
+  };
+
+  const handleEditWeight = (weight: WeightEntry) => {
+    setEditingWeight(weight);
+    setCurrentView('weight');
+  };
+
+  const handleUpdateWeight = async (weight: any) => {
+    if (!editingWeight) return;
+    
+    try {
+      await updateWeightEntry(editingWeight.id, weight);
+      setEditingWeight(null);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to update weight entry:', error);
+    }
+  };
+
+  const handleDeleteWeight = async (id: string) => {
+    try {
+      await deleteWeightEntry(id);
+    } catch (error) {
+      console.error('Failed to delete weight entry:', error);
+    }
+  };
+
+  const handleCancelWeightEdit = () => {
+    setEditingWeight(null);
+    setCurrentView('lifestyle');
+  };
+
+  if (loading || lifestyleLoading || weightLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -310,6 +362,28 @@ function App() {
           </div>
         )}
 
+        {currentView === 'weight' && (
+          <div className="max-w-2xl mx-auto">
+            {editingWeight ? (
+              <WeightForm
+                key={editingWeight.id}
+                onSubmit={handleUpdateWeight}
+                onCancel={handleCancelWeightEdit}
+                initialData={editingWeight}
+                isEditing={true}
+              />
+            ) : (
+              <WeightForm
+                key="new"
+                onSubmit={handleAddWeight}
+                onCancel={undefined}
+                initialData={undefined}
+                isEditing={false}
+              />
+            )}
+          </div>
+        )}
+
         {currentView === 'lifestyle' && (
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex gap-4 justify-center">
@@ -327,6 +401,13 @@ function App() {
                 <Wine className="h-4 w-4 mr-2" />
                 Add Drink Entry
               </button>
+              <button
+                onClick={() => setCurrentView('weight')}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Scale className="h-4 w-4 mr-2" />
+                Add Weight Entry
+              </button>
             </div>
             <LifestyleEntriesList
               cigarEntries={cigarEntries}
@@ -335,6 +416,11 @@ function App() {
               onDeleteCigar={handleDeleteCigar}
               onEditDrink={handleEditDrink}
               onDeleteDrink={handleDeleteDrink}
+            />
+            <WeightEntriesList
+              weightEntries={weightEntries}
+              onEdit={handleEditWeight}
+              onDelete={handleDeleteWeight}
             />
           </div>
         )}

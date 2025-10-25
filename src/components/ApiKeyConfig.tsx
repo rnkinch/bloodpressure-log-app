@@ -22,10 +22,22 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
 
   const checkApiKeyStatus = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/analysis/enhanced`);
-      if (response.ok) {
-        const data = await response.json();
-        setIsConfigured(data.llmInsights?.source === 'huggingface');
+      // First check if API key exists in database
+      const settingsResponse = await fetch(`${apiUrl}/api/settings/huggingface_api_key`);
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        if (settingsData.value) {
+          setApiKey(settingsData.value);
+          setIsConfigured(true);
+          return;
+        }
+      }
+      
+      // Fallback to localStorage
+      const storedApiKey = localStorage.getItem('huggingFaceApiKey');
+      if (storedApiKey) {
+        setApiKey(storedApiKey);
+        setIsConfigured(true);
       }
     } catch (error) {
       console.error('Error checking API key status:', error);
@@ -75,8 +87,41 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
     }
   };
 
-  const handleSave = () => {
-    validateApiKey();
+  const handleSave = async () => {
+    if (!apiKey.trim()) {
+      setMessage('Please enter your Hugging Face API key');
+      setIsValid(false);
+      return;
+    }
+
+    setIsValidating(true);
+    setMessage('Saving API key to database...');
+
+    try {
+      // Save to database first
+      const response = await fetch(`${apiUrl}/api/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ key: 'huggingface_api_key', value: apiKey }),
+      });
+
+      if (response.ok) {
+        // Also save to localStorage for backward compatibility
+        localStorage.setItem('huggingFaceApiKey', apiKey);
+        
+        // Validate the API key
+        await validateApiKey();
+      } else {
+        throw new Error('Failed to save API key to database');
+      }
+    } catch (error) {
+      console.error('Error saving API key:', error);
+      setMessage('Failed to save API key. Please try again.');
+      setIsValid(false);
+      setIsValidating(false);
+    }
   };
 
   const handleClear = () => {

@@ -49,6 +49,19 @@ db.exec(`CREATE TABLE IF NOT EXISTS drinks (
   notes TEXT
 )`);
 
+db.exec(`CREATE TABLE IF NOT EXISTS weights (
+  id TEXT PRIMARY KEY,
+  weight REAL NOT NULL,
+  timestamp TEXT NOT NULL,
+  notes TEXT
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+)`);
+
 // Prepare statements for better performance
 const getReadings = db.prepare('SELECT * FROM readings ORDER BY timestamp DESC');
 const insertReading = db.prepare('INSERT INTO readings (id, systolic, diastolic, heartRate, timestamp, notes) VALUES (?, ?, ?, ?, ?, ?)');
@@ -64,6 +77,14 @@ const getDrinks = db.prepare('SELECT * FROM drinks ORDER BY timestamp DESC');
 const insertDrink = db.prepare('INSERT INTO drinks (id, count, timestamp, type, alcoholContent, notes) VALUES (?, ?, ?, ?, ?, ?)');
 const updateDrink = db.prepare('UPDATE drinks SET count = ?, timestamp = ?, type = ?, alcoholContent = ?, notes = ? WHERE id = ?');
 const deleteDrink = db.prepare('DELETE FROM drinks WHERE id = ?');
+
+const getWeights = db.prepare('SELECT * FROM weights ORDER BY timestamp DESC');
+const insertWeight = db.prepare('INSERT INTO weights (id, weight, timestamp, notes) VALUES (?, ?, ?, ?)');
+const updateWeight = db.prepare('UPDATE weights SET weight = ?, timestamp = ?, notes = ? WHERE id = ?');
+const deleteWeight = db.prepare('DELETE FROM weights WHERE id = ?');
+
+const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
+const setSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)');
 
 // API Routes
 app.get('/api/readings', (req, res) => {
@@ -197,6 +218,72 @@ app.delete('/api/drinks/:id', (req, res) => {
   }
 });
 
+// Weight endpoints
+app.get('/api/weights', (req, res) => {
+  try {
+    const rows = getWeights.all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/weights', (req, res) => {
+  try {
+    const { weight, timestamp, notes } = req.body;
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
+    
+    insertWeight.run(id, weight, timestamp, notes);
+    res.json({ id, weight, timestamp, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/weights/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { weight, timestamp, notes } = req.body;
+    
+    updateWeight.run(weight, timestamp, notes, id);
+    res.json({ id, weight, timestamp, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/weights/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    deleteWeight.run(id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Settings endpoints
+app.get('/api/settings/:key', (req, res) => {
+  try {
+    const { key } = req.params;
+    const result = getSetting.get(key);
+    res.json({ key, value: result ? result.value : null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/settings', (req, res) => {
+  try {
+    const { key, value } = req.body;
+    const timestamp = new Date().toISOString();
+    setSetting.run(key, value, timestamp);
+    res.json({ key, value, updated_at: timestamp });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // AI Analysis endpoint
 app.get('/api/analysis/advanced', async (req, res) => {
   try {
@@ -218,13 +305,19 @@ app.get('/api/analysis/advanced', async (req, res) => {
       ...row,
       timestamp: new Date(row.timestamp)
     }));
+    
+    const weightEntries = getWeights.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
 
-    console.log(`Found ${cigarEntries.length} cigar entries, ${drinkEntries.length} drink entries`);
+    console.log(`Found ${cigarEntries.length} cigar entries, ${drinkEntries.length} drink entries, ${weightEntries.length} weight entries`);
 
     const analysis = await aiAnalysisService.generateAdvancedAnalysis(
       readings, 
       cigarEntries, 
-      drinkEntries
+      drinkEntries,
+      weightEntries
     );
 
     console.log('Analysis generated successfully');
@@ -245,6 +338,12 @@ app.get('/api/analysis/enhanced', async (req, res) => {
   try {
     console.log('Enhanced AI Analysis endpoint called');
     
+    // Load API key from database
+    const apiKeyResult = getSetting.get('huggingface_api_key');
+    if (apiKeyResult) {
+      aiAnalysisService.huggingFaceService.setApiKey(apiKeyResult.value);
+    }
+    
     const readings = getReadings.all().map(row => ({
       ...row,
       timestamp: new Date(row.timestamp)
@@ -259,11 +358,17 @@ app.get('/api/analysis/enhanced', async (req, res) => {
       ...row,
       timestamp: new Date(row.timestamp)
     }));
+    
+    const weightEntries = getWeights.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
 
     const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
       readings, 
       cigarEntries, 
-      drinkEntries
+      drinkEntries,
+      weightEntries
     );
 
     console.log('Enhanced analysis generated successfully');
@@ -303,11 +408,17 @@ app.post('/api/analysis/enhanced', async (req, res) => {
       ...row,
       timestamp: new Date(row.timestamp)
     }));
+    
+    const weightEntries = getWeights.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
 
     const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
       readings, 
       cigarEntries, 
-      drinkEntries
+      drinkEntries,
+      weightEntries
     );
 
     console.log('Enhanced analysis generated successfully');
@@ -351,12 +462,18 @@ app.post('/api/analysis/ask', async (req, res) => {
       ...row,
       timestamp: new Date(row.timestamp)
     }));
+    
+    const weightEntries = getWeights.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
 
     const answer = await aiAnalysisService.answerUserQuestion(
       question,
       readings, 
       cigarEntries, 
-      drinkEntries
+      drinkEntries,
+      weightEntries
     );
 
     console.log('AI Q&A response generated successfully');
@@ -389,11 +506,17 @@ app.get('/api/analysis/report', async (req, res) => {
       ...row,
       timestamp: new Date(row.timestamp)
     }));
+    
+    const weightEntries = getWeights.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
 
     const report = await aiAnalysisService.generateHealthReport(
       readings, 
       cigarEntries, 
-      drinkEntries
+      drinkEntries,
+      weightEntries
     );
 
     console.log('Health report generated successfully');

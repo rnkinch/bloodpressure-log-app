@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ApiKeyConfig from './ApiKeyConfig';
+import { api } from '../utils/api';
 
 interface AIInsights {
   insights: string;
@@ -120,12 +121,25 @@ const EnhancedAIFeatures: React.FC = () => {
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
   useEffect(() => {
-    // Load API key from localStorage on component mount
-    const storedApiKey = localStorage.getItem('huggingFaceApiKey');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-      setApiKeyConfigured(true);
-    }
+    // Load API key from database on component mount
+    const loadApiKey = async () => {
+      try {
+        const result = await api.getSetting('huggingface_api_key');
+        if (result.value) {
+          setApiKey(result.value);
+          setApiKeyConfigured(true);
+        }
+      } catch (error) {
+        console.error('Failed to load API key from database:', error);
+        // Fallback to localStorage for backward compatibility
+        const storedApiKey = localStorage.getItem('huggingFaceApiKey');
+        if (storedApiKey) {
+          setApiKey(storedApiKey);
+          setApiKeyConfigured(true);
+        }
+      }
+    };
+    loadApiKey();
     loadEnhancedAnalysis();
   }, []);
 

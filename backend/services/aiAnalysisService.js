@@ -84,7 +84,7 @@ class AIAnalysisService {
     };
   }
 
-  async generateAdvancedAnalysis(readings, cigarEntries = [], drinkEntries = []) {
+  async generateAdvancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
     if (!readings || readings.length === 0) {
       return this.getInsufficientDataResponse();
     }
@@ -94,7 +94,7 @@ class AIAnalysisService {
       dataQuality: this.assessDataQuality(readings),
       riskAssessment: this.performAdvancedRiskAssessment(readings),
       trendAnalysis: this.performAdvancedTrendAnalysis(readings),
-      lifestyleCorrelation: this.analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries),
+      lifestyleCorrelation: this.analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries),
       circadianAnalysis: this.analyzeCircadianPatterns(readings),
       predictiveInsights: this.generatePredictiveInsights(readings),
       personalizedRecommendations: [],
@@ -198,10 +198,11 @@ class AIAnalysisService {
     };
   }
 
-  analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries) {
+  analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries) {
     const correlations = {
       smoking: this.analyzeSmokingCorrelation(readings, cigarEntries),
       alcohol: this.analyzeAlcoholCorrelation(readings, drinkEntries),
+      weight: this.analyzeWeightCorrelation(readings, weightEntries),
       combined: { impact: 'none', confidence: 'low' }
     };
 
@@ -269,6 +270,56 @@ class AIAnalysisService {
       moderateDrinking: this.calculateDrinkingImpact(readings, drinkEntries, 2, 'moderate'),
       lightDrinking: this.calculateDrinkingImpact(readings, drinkEntries, 1, 'light'),
       noDrinking: { impact: 'no_data', confidence: 'low' }
+    };
+  }
+
+  analyzeWeightCorrelation(readings, weightEntries) {
+    if (weightEntries.length === 0) {
+      return { 
+        correlation: 0, 
+        impact: 'no_data', 
+        confidence: 'low',
+        trend: 'stable',
+        bmiCategory: 'unknown'
+      };
+    }
+
+    // Calculate weight trend
+    const sortedWeights = weightEntries
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    const weightTrend = this.calculateWeightTrend(sortedWeights);
+    
+    // Find readings that have weight data within 7 days
+    const readingsWithWeight = readings.filter(reading => {
+      const readingDate = new Date(reading.timestamp);
+      return weightEntries.some(weight => {
+        const weightDate = new Date(weight.timestamp);
+        const daysDiff = Math.abs(readingDate - weightDate) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 7;
+      });
+    });
+
+    if (readingsWithWeight.length === 0) {
+      return { 
+        correlation: 0, 
+        impact: 'insufficient_data', 
+        confidence: 'low',
+        trend: weightTrend.trend,
+        bmiCategory: 'unknown'
+      };
+    }
+
+    // Calculate correlation between weight and blood pressure
+    const correlation = this.calculateWeightBPCorrelation(readingsWithWeight, weightEntries);
+    
+    return {
+      correlation: correlation,
+      impact: this.assessWeightImpact(correlation, weightTrend),
+      confidence: readingsWithWeight.length >= 5 ? 'medium' : 'low',
+      trend: weightTrend.trend,
+      bmiCategory: this.calculateBMICategory(sortedWeights[sortedWeights.length - 1].weight),
+      recommendations: this.generateWeightRecommendations(correlation, weightTrend)
     };
   }
 
@@ -777,9 +828,9 @@ class AIAnalysisService {
   }
 
   // New Hugging Face enhanced methods
-  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = []) {
+  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
     // Generate the existing statistical analysis
-    const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries);
+    const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
     
     try {
       // Enhance with Hugging Face insights
@@ -810,12 +861,13 @@ class AIAnalysisService {
     }
   }
 
-  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = []) {
+  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
     try {
       const userData = {
         readings: readings,
         cigars: cigarEntries,
-        drinks: drinkEntries
+        drinks: drinkEntries,
+        weights: weightEntries
       };
 
       const answer = await this.huggingFaceService.answerQuestion(question, userData);
@@ -846,9 +898,9 @@ class AIAnalysisService {
     }
   }
 
-  async generateHealthReport(readings, cigarEntries = [], drinkEntries = []) {
+  async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
     try {
-      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries);
+      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
       
       const reportPrompt = this.createHealthReportPrompt(analysis);
       const report = await this.huggingFaceService.callHuggingFaceAPI(reportPrompt);
@@ -867,7 +919,7 @@ class AIAnalysisService {
       console.error('Error generating health report:', error);
       return {
         report: 'Unable to generate comprehensive health report at this time.',
-        analysis: await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries),
+        analysis: await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries),
         generatedAt: new Date().toISOString(),
         error: error.message
       };
@@ -883,6 +935,134 @@ Data Quality: ${analysis.dataQuality?.quality || 'unknown'}
 Confidence Score: ${analysis.confidenceScore || 0}
 
 Create a detailed, professional health report summarizing the findings and recommendations:`;
+  }
+
+  // Weight analysis helper methods
+  calculateWeightTrend(weightEntries) {
+    if (weightEntries.length < 2) {
+      return { trend: 'insufficient_data', change: 0, rate: 0 };
+    }
+
+    const firstWeight = weightEntries[0].weight;
+    const lastWeight = weightEntries[weightEntries.length - 1].weight;
+    const totalChange = lastWeight - firstWeight;
+    
+    const daysDiff = this.differenceInDays(
+      new Date(weightEntries[weightEntries.length - 1].timestamp),
+      new Date(weightEntries[0].timestamp)
+    );
+    
+    const rate = daysDiff > 0 ? totalChange / daysDiff : 0;
+    
+    let trend = 'stable';
+    if (Math.abs(rate) > 0.1) {
+      trend = rate > 0 ? 'increasing' : 'decreasing';
+    }
+    
+    return {
+      trend,
+      change: parseFloat(totalChange.toFixed(2)),
+      rate: parseFloat(rate.toFixed(3))
+    };
+  }
+
+  calculateWeightBPCorrelation(readings, weightEntries) {
+    if (readings.length < 3 || weightEntries.length < 2) {
+      return 0;
+    }
+
+    // Match readings with closest weight entries
+    const matchedData = readings.map(reading => {
+      const readingDate = new Date(reading.timestamp);
+      let closestWeight = null;
+      let minDaysDiff = Infinity;
+
+      weightEntries.forEach(weight => {
+        const weightDate = new Date(weight.timestamp);
+        const daysDiff = Math.abs(readingDate - weightDate) / (1000 * 60 * 60 * 24);
+        
+        if (daysDiff <= 7 && daysDiff < minDaysDiff) {
+          minDaysDiff = daysDiff;
+          closestWeight = weight.weight;
+        }
+      });
+
+      return closestWeight ? {
+        systolic: reading.systolic,
+        diastolic: reading.diastolic,
+        weight: closestWeight
+      } : null;
+    }).filter(data => data !== null);
+
+    if (matchedData.length < 3) {
+      return 0;
+    }
+
+    // Calculate correlation coefficient
+    const systolicCorrelation = this.calculateCorrelation(
+      matchedData.map(d => d.systolic),
+      matchedData.map(d => d.weight)
+    );
+    
+    const diastolicCorrelation = this.calculateCorrelation(
+      matchedData.map(d => d.diastolic),
+      matchedData.map(d => d.weight)
+    );
+
+    return (systolicCorrelation + diastolicCorrelation) / 2;
+  }
+
+  calculateCorrelation(x, y) {
+    const n = x.length;
+    if (n === 0) return 0;
+
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+    const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+    return denominator === 0 ? 0 : numerator / denominator;
+  }
+
+  assessWeightImpact(correlation, weightTrend) {
+    if (Math.abs(correlation) < 0.3) return 'minimal';
+    if (Math.abs(correlation) < 0.6) return 'moderate';
+    return 'significant';
+  }
+
+  calculateBMICategory(weight) {
+    // This is a simplified BMI calculation - in a real app, you'd need height
+    // For now, we'll use weight ranges as a proxy
+    if (weight < 120) return 'underweight';
+    if (weight < 150) return 'normal';
+    if (weight < 180) return 'overweight';
+    return 'obese';
+  }
+
+  generateWeightRecommendations(correlation, weightTrend) {
+    const recommendations = [];
+    
+    if (Math.abs(correlation) > 0.5) {
+      recommendations.push('Strong correlation detected between weight and blood pressure');
+    }
+    
+    if (weightTrend.trend === 'increasing' && weightTrend.rate > 0.2) {
+      recommendations.push('Consider weight management strategies to help control blood pressure');
+    }
+    
+    if (weightTrend.trend === 'decreasing' && weightTrend.rate < -0.2) {
+      recommendations.push('Monitor blood pressure closely during weight loss');
+    }
+    
+    if (recommendations.length === 0) {
+      recommendations.push('Continue monitoring both weight and blood pressure trends');
+    }
+    
+  return recommendations;
   }
 }
 

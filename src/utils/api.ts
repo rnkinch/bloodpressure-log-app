@@ -1,4 +1,4 @@
-import { BloodPressureReading, CigarEntry, DrinkEntry } from '../types';
+import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -144,6 +144,52 @@ export const api = {
     }
   },
 
+  // Weight entries
+  getWeightEntries: async (): Promise<WeightEntry[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/weights`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch weight entries');
+    }
+    return response.json();
+  },
+
+  addWeightEntry: async (entry: Omit<WeightEntry, 'id'>): Promise<WeightEntry> => {
+    const response = await fetch(`${API_BASE_URL}/api/weights`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to add weight entry');
+    }
+    return response.json();
+  },
+
+  updateWeightEntry: async (id: string, entry: Partial<WeightEntry>): Promise<WeightEntry> => {
+    const response = await fetch(`${API_BASE_URL}/api/weights/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update weight entry');
+    }
+    return response.json();
+  },
+
+  deleteWeightEntry: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/weights/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete weight entry');
+    }
+  },
+
   // AI Analysis
   getAdvancedAnalysis: async (): Promise<any> => {
     const response = await fetch(`${API_BASE_URL}/api/analysis/advanced`);
@@ -157,6 +203,29 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/api/analysis/health`);
     if (!response.ok) {
       throw new Error('AI service health check failed');
+    }
+    return response.json();
+  },
+
+  // Settings
+  getSetting: async (key: string): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/api/settings/${key}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch setting');
+    }
+    return response.json();
+  },
+
+  setSetting: async (key: string, value: string): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/api/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ key, value }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to save setting');
     }
     return response.json();
   },
