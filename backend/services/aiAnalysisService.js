@@ -280,7 +280,13 @@ class AIAnalysisService {
         impact: 'no_data', 
         confidence: 'low',
         trend: 'stable',
-        bmiCategory: 'unknown'
+        bmiCategory: 'unknown',
+        recentWeight: 'no data',
+        weightVariability: 'unknown',
+        weightChangeRate: 0,
+        idealWeightRange: 'unknown',
+        weightStatus: 'unknown',
+        healthRiskLevel: 'unknown'
       };
     }
 
@@ -289,6 +295,29 @@ class AIAnalysisService {
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     
     const weightTrend = this.calculateWeightTrend(sortedWeights);
+    const recentWeight = sortedWeights[sortedWeights.length - 1].weight;
+    
+    // Calculate weight variability (standard deviation)
+    const weightValues = sortedWeights.map(w => w.weight);
+    const weightVariability = this.standardDeviation(weightValues);
+    
+    // Calculate weight change rate (kg per month)
+    const weightChangeRate = this.calculateWeightChangeRate(sortedWeights);
+    
+    // Calculate BMI and related metrics
+    const height = 1.83; // Default height of 6ft (1.83m)
+    const bmi = recentWeight / (height * height);
+    const bmiCategory = this.calculateBMICategory(recentWeight, height);
+    
+    // Calculate ideal weight range based on BMI 18.5-24.9
+    const minIdealWeight = 18.5 * (height * height);
+    const maxIdealWeight = 24.9 * (height * height);
+    const idealWeightRange = `${minIdealWeight.toFixed(1)}-${maxIdealWeight.toFixed(1)} kg`;
+    
+    // Determine weight status relative to ideal range
+    let weightStatus = 'within range';
+    if (recentWeight < minIdealWeight) weightStatus = 'below range';
+    else if (recentWeight > maxIdealWeight) weightStatus = 'above range';
     
     // Find readings that have weight data within 7 days
     const readingsWithWeight = readings.filter(reading => {
@@ -306,21 +335,205 @@ class AIAnalysisService {
         impact: 'insufficient_data', 
         confidence: 'low',
         trend: weightTrend.trend,
-        bmiCategory: 'unknown'
+        bmiCategory: bmiCategory,
+        recentWeight: recentWeight,
+        weightVariability: weightVariability.toFixed(2),
+        weightChangeRate: weightChangeRate.toFixed(2),
+        idealWeightRange: idealWeightRange,
+        weightStatus: weightStatus,
+        healthRiskLevel: this.calculateWeightHealthRisk(bmi, weightTrend.trend)
       };
     }
 
     // Calculate correlation between weight and blood pressure
     const correlation = this.calculateWeightBPCorrelation(readingsWithWeight, weightEntries);
     
+    // Calculate additional BP metrics related to weight
+    const weightImpact = this.assessWeightImpact(correlation, weightTrend);
+    const weightBPSensitivity = this.calculateWeightBPSensitivity(readingsWithWeight, weightEntries);
+    const healthRiskLevel = this.calculateWeightHealthRisk(bmi, weightTrend.trend);
+    
+    // Generate comprehensive recommendations
+    const recommendations = this.generateWeightRecommendations(correlation, weightTrend, bmi, weightBPSensitivity);
+    
     return {
       correlation: correlation,
-      impact: this.assessWeightImpact(correlation, weightTrend),
+      impact: weightImpact,
       confidence: readingsWithWeight.length >= 5 ? 'medium' : 'low',
       trend: weightTrend.trend,
-      bmiCategory: this.calculateBMICategory(sortedWeights[sortedWeights.length - 1].weight),
-      recommendations: this.generateWeightRecommendations(correlation, weightTrend)
+      bmiCategory: bmiCategory,
+      recentWeight: recentWeight,
+      weightVariability: weightVariability.toFixed(2),
+      weightChangeRate: weightChangeRate.toFixed(2),
+      idealWeightRange: idealWeightRange,
+      weightStatus: weightStatus,
+      healthRiskLevel: healthRiskLevel,
+      bpSensitivity: weightBPSensitivity.toFixed(2),
+      recommendations: recommendations
     };
+  }
+  
+  // New helper methods for enhanced weight analysis
+  
+  calculateWeightChangeRate(weightEntries) {
+    if (weightEntries.length < 2) return 0;
+    
+    const firstEntry = weightEntries[0];
+    const lastEntry = weightEntries[weightEntries.length - 1];
+    const weightChange = lastEntry.weight - firstEntry.weight;
+    
+    // Calculate time difference in months
+    const timeDiffMs = new Date(lastEntry.timestamp) - new Date(firstEntry.timestamp);
+    const timeDiffMonths = timeDiffMs / (1000 * 60 * 60 * 24 * 30.44); // Average days per month
+    
+    if (timeDiffMonths < 0.1) return 0; // Avoid division by very small numbers
+    
+    return weightChange / timeDiffMonths;
+  }
+  
+  calculateBMICategory(weight, height = 1.83) {
+    const bmi = weight / (height * height);
+    
+    if (bmi < 16.5) return 'severely underweight';
+    if (bmi < 18.5) return 'underweight';
+    if (bmi < 25) return 'normal';
+    if (bmi < 30) return 'overweight';
+    if (bmi < 35) return 'obese class I';
+    if (bmi < 40) return 'obese class II';
+    return 'obese class III';
+  }
+  
+  calculateWeightHealthRisk(bmi, weightTrend) {
+    // Base risk on BMI category
+    let risk = 'low';
+    
+    if (bmi < 16.5) risk = 'high'; // Severely underweight
+    else if (bmi < 18.5) risk = 'moderate'; // Underweight
+    else if (bmi < 25) risk = 'low'; // Normal
+    else if (bmi < 30) risk = 'moderate'; // Overweight
+    else if (bmi < 35) risk = 'high'; // Obese class I
+    else risk = 'very high'; // Obese class II and III
+    
+    // Adjust risk based on weight trend
+    if (risk === 'high' || risk === 'very high') {
+      if (weightTrend === 'increasing') risk = 'very high';
+      if (weightTrend === 'decreasing') risk = 'high';
+    } else if (risk === 'moderate') {
+      if (weightTrend === 'increasing') risk = 'high';
+      if (weightTrend === 'decreasing') risk = 'low';
+    }
+    
+    return risk;
+  }
+  
+  calculateWeightBPSensitivity(readingsWithWeight, weightEntries) {
+    // Calculate how sensitive BP is to weight changes
+    // Higher values indicate greater BP response to weight changes
+    
+    if (readingsWithWeight.length < 5 || weightEntries.length < 2) return 0;
+    
+    // Group readings by weight (rounded to nearest kg)
+    const readingsByWeight = {};
+    
+    readingsWithWeight.forEach(reading => {
+      // Find closest weight entry
+      const readingDate = new Date(reading.timestamp);
+      let closestWeight = null;
+      let minDaysDiff = Infinity;
+      
+      weightEntries.forEach(weight => {
+        const weightDate = new Date(weight.timestamp);
+        const daysDiff = Math.abs(readingDate - weightDate) / (1000 * 60 * 60 * 24);
+        
+        if (daysDiff <= 7 && daysDiff < minDaysDiff) {
+          minDaysDiff = daysDiff;
+          closestWeight = Math.round(weight.weight);
+        }
+      });
+      
+      if (closestWeight !== null) {
+        if (!readingsByWeight[closestWeight]) {
+          readingsByWeight[closestWeight] = [];
+        }
+        readingsByWeight[closestWeight].push(reading);
+      }
+    });
+    
+    // Calculate average BP for each weight
+    const weightBPMap = {};
+    Object.entries(readingsByWeight).forEach(([weight, readings]) => {
+      const avgSystolic = this.mean(readings.map(r => r.systolic));
+      const avgDiastolic = this.mean(readings.map(r => r.diastolic));
+      weightBPMap[weight] = {
+        systolic: avgSystolic,
+        diastolic: avgDiastolic,
+        count: readings.length
+      };
+    });
+    
+    // Calculate sensitivity (BP change per kg of weight)
+    const weights = Object.keys(weightBPMap).map(Number).sort((a, b) => a - b);
+    if (weights.length < 2) return 0;
+    
+    let totalSensitivity = 0;
+    let pairCount = 0;
+    
+    for (let i = 1; i < weights.length; i++) {
+      const lowerWeight = weights[i-1];
+      const higherWeight = weights[i];
+      const weightDiff = higherWeight - lowerWeight;
+      
+      if (weightDiff > 0) {
+        const systolicDiff = weightBPMap[higherWeight].systolic - weightBPMap[lowerWeight].systolic;
+        const diastolicDiff = weightBPMap[higherWeight].diastolic - weightBPMap[lowerWeight].diastolic;
+        
+        // Average of systolic and diastolic sensitivity
+        const sensitivity = (systolicDiff + diastolicDiff) / (2 * weightDiff);
+        totalSensitivity += sensitivity;
+        pairCount++;
+      }
+    }
+    
+    return pairCount > 0 ? totalSensitivity / pairCount : 0;
+  }
+  
+  generateWeightRecommendations(correlation, weightTrend, bmi, sensitivity = 0) {
+    const recommendations = [];
+    
+    // Base recommendations on BMI
+    if (bmi < 18.5) {
+      recommendations.push('Consider a nutritionist consultation for healthy weight gain strategies');
+      recommendations.push('Focus on nutrient-dense foods to increase weight in a healthy manner');
+    } else if (bmi >= 25) {
+      recommendations.push('Aim for gradual weight loss of 0.5-1 kg per week through balanced diet and exercise');
+      
+      if (bmi >= 30) {
+        recommendations.push('Consider medical supervision for your weight management plan');
+      }
+    }
+    
+    // Add recommendations based on correlation with BP
+    if (Math.abs(correlation) > 0.5) {
+      recommendations.push('Your blood pressure shows strong correlation with weight changes');
+      
+      if (sensitivity > 1.5) {
+        recommendations.push('Your blood pressure appears highly sensitive to weight changes');
+      }
+    }
+    
+    // Add recommendations based on weight trend
+    if (weightTrend.trend === 'increasing' && bmi >= 25) {
+      recommendations.push('Current weight trend is increasing - consider lifestyle modifications');
+    } else if (weightTrend.trend === 'decreasing' && bmi >= 25) {
+      recommendations.push('Current weight loss trend is positive - continue your current approach');
+    }
+    
+    // Ensure we have at least some recommendations
+    if (recommendations.length === 0) {
+      recommendations.push('Maintain current weight through balanced diet and regular physical activity');
+    }
+    
+    return recommendations;
   }
 
   calculateDrinkingImpact(readings, drinkEntries, threshold, category) {
@@ -900,41 +1113,107 @@ class AIAnalysisService {
 
   async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
     try {
+      // Generate enhanced analysis with AI insights
       const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
       
+      // Create a prompt for the health report
       const reportPrompt = this.createHealthReportPrompt(analysis);
-      const report = await this.huggingFaceService.callHuggingFaceAPI(reportPrompt);
+      
+      // Use the medical model for health reports
+      const report = await this.huggingFaceService.callHuggingFaceAPI(reportPrompt, this.huggingFaceService.medicalModel);
+      
+      // Add a disclaimer to the report
+      const reportWithDisclaimer = `${report}\n\nDISCLAIMER: This report was generated using AI and should be reviewed by a healthcare professional. It is not a substitute for professional medical advice, diagnosis, or treatment.`;
       
       return {
-        report: report,
+        report: reportWithDisclaimer,
         analysis: analysis,
         generatedAt: new Date().toISOString(),
+        source: 'huggingface',
         period: {
-          start: readings.length > 0 ? readings[readings.length - 1].timestamp : null,
-          end: readings.length > 0 ? readings[0].timestamp : null,
+          start: readings.length > 0 ? new Date(readings[readings.length - 1].timestamp).toISOString() : null,
+          end: readings.length > 0 ? new Date(readings[0].timestamp).toISOString() : null,
           totalReadings: readings.length
         }
       };
     } catch (error) {
       console.error('Error generating health report:', error);
+      
+      // If there's an error with the AI, still provide a basic report
+      const basicAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
+      
       return {
-        report: 'Unable to generate comprehensive health report at this time.',
-        analysis: await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries),
+        report: 'Unable to generate AI-powered health report at this time. Please ensure your API key is configured correctly and try again.',
+        analysis: basicAnalysis,
         generatedAt: new Date().toISOString(),
-        error: error.message
+        source: 'fallback',
+        error: error.message,
+        period: {
+          start: readings.length > 0 ? new Date(readings[readings.length - 1].timestamp).toISOString() : null,
+          end: readings.length > 0 ? new Date(readings[0].timestamp).toISOString() : null,
+          totalReadings: readings.length
+        }
       };
     }
   }
 
   createHealthReportPrompt(analysis) {
-    return `Generate a comprehensive health report based on this blood pressure analysis:
+    // Extract weight data if available
+    const weightData = analysis.lifestyleCorrelation?.weight || {};
+    const hasWeightData = Object.keys(weightData).length > 0;
+    const weightTrend = weightData?.trend || 'unknown';
+    const weightCorrelation = weightData?.correlation || 0;
+    const weightImpact = weightData?.impact || 'no data';
+    const bmiCategory = weightData?.bmiCategory || 'unknown';
+    const recentWeight = weightData?.recentWeight || 'no data';
+    
+    return `You are a cardiologist creating a comprehensive blood pressure health report for a patient. Use the following data to generate a professional medical report:
 
-Risk Assessment: ${analysis.riskAssessment?.overall || 'unknown'}
-Trend Analysis: ${analysis.trendAnalysis?.systolic?.direction || 'stable'}
-Data Quality: ${analysis.dataQuality?.quality || 'unknown'}
-Confidence Score: ${analysis.confidenceScore || 0}
+RISK ASSESSMENT:
+- Overall Risk Level: ${analysis.riskAssessment?.overall || 'unknown'}
+- Risk Score: ${analysis.riskAssessment?.riskScore || 0}
+- Current Risk: ${analysis.riskAssessment?.current || 'unknown'}
+- Historical Risk: ${analysis.riskAssessment?.historical || 'unknown'}
 
-Create a detailed, professional health report summarizing the findings and recommendations:`;
+TREND ANALYSIS:
+- Systolic Trend: ${analysis.trendAnalysis?.systolic?.direction || 'stable'} (Confidence: ${analysis.trendAnalysis?.systolic?.confidence || 'unknown'})
+- Diastolic Trend: ${analysis.trendAnalysis?.diastolic?.direction || 'stable'} (Confidence: ${analysis.trendAnalysis?.diastolic?.confidence || 'unknown'})
+- Heart Rate Trend: ${analysis.trendAnalysis?.heartRate?.direction || 'stable'} (Confidence: ${analysis.trendAnalysis?.heartRate?.confidence || 'unknown'})
+
+DATA QUALITY:
+- Quality Assessment: ${analysis.dataQuality?.quality || 'unknown'}
+- Total Readings: ${analysis.dataQuality?.totalReadings || 0}
+- Time Span: ${analysis.dataQuality?.timeSpanDays || 0} days
+- Confidence Score: ${analysis.confidenceScore || 0}
+
+LIFESTYLE FACTORS:
+- Smoking Impact: ${analysis.lifestyleCorrelation?.smoking?.impact || 'no data'}
+- Alcohol Impact: ${analysis.lifestyleCorrelation?.alcohol?.moderateDrinking?.impact || analysis.lifestyleCorrelation?.alcohol?.lightDrinking?.impact || 'no data'}
+
+WEIGHT ASSESSMENT:
+- Recent Weight: ${recentWeight}
+- BMI Category: ${bmiCategory}
+- Weight Trend: ${weightTrend}
+- BP Correlation: ${weightCorrelation.toFixed(2)}
+- Impact on BP: ${weightImpact}
+${hasWeightData ? `- Weight Recommendations: ${weightData?.recommendations?.join(', ') || 'none available'}` : ''}
+
+CIRCADIAN PATTERNS:
+- Morning Average: ${analysis.circadianAnalysis?.morning?.averageSystolic || 0}/${analysis.circadianAnalysis?.morning?.averageDiastolic || 0}
+- Evening Average: ${analysis.circadianAnalysis?.evening?.averageSystolic || 0}/${analysis.circadianAnalysis?.evening?.averageDiastolic || 0}
+
+Create a structured medical report with these sections:
+1. EXECUTIVE SUMMARY: Brief overview of cardiovascular health status
+2. DETAILED FINDINGS: Analysis of blood pressure patterns and risk factors
+3. WEIGHT ANALYSIS: Assessment of weight status and its relationship to blood pressure
+4. CLINICAL INTERPRETATION: Medical significance of the findings according to current guidelines
+5. RECOMMENDATIONS: Evidence-based interventions appropriate for the risk level, including weight management if relevant
+6. MONITORING PLAN: Suggested frequency and approach for continued BP monitoring
+7. DISCLAIMER: Note that this report is generated by AI and should be reviewed by a healthcare professional
+
+Format the report professionally as a medical document. Include specific values from the data provided. Reference relevant clinical guidelines (JNC 8, AHA, ESC) where appropriate.
+
+If weight data shows a significant correlation with blood pressure, emphasize weight management strategies in your recommendations section. Include specific dietary approaches (like DASH diet) and physical activity recommendations based on the patient's BMI category.`;
   }
 
   // Weight analysis helper methods

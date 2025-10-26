@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Key, Eye, EyeOff, Save, Check, AlertCircle } from 'lucide-react';
 
 interface ApiKeyConfigProps {
@@ -7,6 +7,7 @@ interface ApiKeyConfigProps {
 
 const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
   const [apiKey, setApiKey] = useState('');
+  const [selectedModel, setSelectedModel] = useState('distilbert-base-uncased-finetuned-sst-2-english');
   const [showKey, setShowKey] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -15,34 +16,63 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
 
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-  useEffect(() => {
-    // Check if API key is already configured
-    checkApiKeyStatus();
-  }, []);
+  // Available models with descriptions
+  const availableModels = [
+    {
+      id: 'distilbert-base-uncased-finetuned-sst-2-english',
+      name: 'DistilBERT SST-2',
+      description: 'Sentiment analysis model, guaranteed to work with Inference API',
+      category: 'Classification'
+    },
+    {
+      id: 'emilyalsentzer/Bio_ClinicalBERT',
+      name: 'Bio_ClinicalBERT',
+      description: 'Medical model trained on clinical text, ideal for health data',
+      category: 'Medical'
+    },
+    {
+      id: 'medicalai/ClinicalBERT',
+      name: 'ClinicalBERT',
+      description: 'Specialized for medical text analysis and clinical notes',
+      category: 'Medical'
+    },
+    {
+      id: 'facebook/bart-large-mnli',
+      name: 'BART MNLI',
+      description: 'Text classification and entailment model',
+      category: 'Classification'
+    }
+  ];
 
-  const checkApiKeyStatus = async () => {
+  const checkApiKeyStatus = useCallback(async () => {
     try {
-      // First check if API key exists in database
+      // Check if API key exists in database
       const settingsResponse = await fetch(`${apiUrl}/api/settings/huggingface_api_key`);
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json();
         if (settingsData.value) {
           setApiKey(settingsData.value);
           setIsConfigured(true);
-          return;
         }
       }
       
-      // Fallback to localStorage
-      const storedApiKey = localStorage.getItem('huggingFaceApiKey');
-      if (storedApiKey) {
-        setApiKey(storedApiKey);
-        setIsConfigured(true);
+      // Check for model preference
+      const modelResponse = await fetch(`${apiUrl}/api/settings/huggingface_model`);
+      if (modelResponse.ok) {
+        const modelData = await modelResponse.json();
+        if (modelData.value) {
+          setSelectedModel(modelData.value);
+        }
       }
     } catch (error) {
       console.error('Error checking API key status:', error);
     }
-  };
+  }, [apiUrl]);
+
+  useEffect(() => {
+    // Check if API key is already configured
+    checkApiKeyStatus();
+  }, [checkApiKeyStatus]);
 
   const validateApiKey = async () => {
     if (!apiKey.trim()) {
@@ -61,14 +91,14 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ apiKey }),
+        body: JSON.stringify({ apiKey, model: selectedModel }),
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.valid) {
           setIsValid(true);
-          setMessage('API key is valid! AI features are now enabled.');
+          setMessage(`API key is valid! Using model: ${data.model || selectedModel}. AI features are now enabled.`);
           setIsConfigured(true);
           onApiKeySet(apiKey);
         } else {
@@ -95,11 +125,11 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
     }
 
     setIsValidating(true);
-    setMessage('Saving API key to database...');
+    setMessage('Saving API key and model preference to database...');
 
     try {
-      // Save to database first
-      const response = await fetch(`${apiUrl}/api/settings`, {
+      // Save API key to database
+      const apiKeyResponse = await fetch(`${apiUrl}/api/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,18 +137,24 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
         body: JSON.stringify({ key: 'huggingface_api_key', value: apiKey }),
       });
 
-      if (response.ok) {
-        // Also save to localStorage for backward compatibility
-        localStorage.setItem('huggingFaceApiKey', apiKey);
-        
+      // Save model preference to database
+      const modelResponse = await fetch(`${apiUrl}/api/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ key: 'huggingface_model', value: selectedModel }),
+      });
+
+      if (apiKeyResponse.ok && modelResponse.ok) {
         // Validate the API key
         await validateApiKey();
       } else {
-        throw new Error('Failed to save API key to database');
+        throw new Error('Failed to save settings to database');
       }
     } catch (error) {
-      console.error('Error saving API key:', error);
-      setMessage('Failed to save API key. Please try again.');
+      console.error('Error saving settings:', error);
+      setMessage('Failed to save settings. Please try again.');
       setIsValid(false);
       setIsValidating(false);
     }
@@ -179,6 +215,27 @@ const ApiKeyConfig: React.FC<ApiKeyConfigProps> = ({ onApiKeySet }) => {
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Your API key is stored locally in your browser and never sent to our servers
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-2">
+            AI Model Selection
+          </label>
+          <select
+            id="model"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            {availableModels.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name} ({model.category}) - {model.description}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Choose the AI model that best fits your needs. Medical models are specialized for health analysis.
           </p>
         </div>
 

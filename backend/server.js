@@ -3,6 +3,7 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 const bodyParser = require('body-parser');
 const path = require('path');
+const axios = require('axios');
 const AIAnalysisService = require('./services/aiAnalysisService');
 
 const app = express();
@@ -11,9 +12,38 @@ const PORT = process.env.PORT || 3001;
 // Initialize AI Analysis Service
 const aiAnalysisService = new AIAnalysisService();
 
+// Load model preferences from database on startup
+const loadModelPreferences = () => {
+  try {
+    const modelResult = getSetting.get('huggingface_model');
+    // Only use stored model if it's a valid one, otherwise use gpt2
+    const validModels = ['gpt2', 'distilgpt2', 'microsoft/DialoGPT-small', 'distilbert-base-uncased'];
+    if (modelResult && validModels.includes(modelResult.value)) {
+      aiAnalysisService.huggingFaceService.setSelectedModel(modelResult.value);
+      console.log('Loaded valid model preference:', modelResult.value);
+    } else {
+      aiAnalysisService.huggingFaceService.setSelectedModel('gpt2');
+      console.log('Using default model: gpt2');
+    }
+  } catch (error) {
+    console.error('Error loading model preferences:', error);
+    aiAnalysisService.huggingFaceService.setSelectedModel('gpt2');
+    console.log('Using default model due to error: gpt2');
+  }
+};
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+
+// Disable caching for API responses
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 app.use(express.static(path.join(__dirname, '../build')));
 
 // Database setup
@@ -85,6 +115,9 @@ const deleteWeight = db.prepare('DELETE FROM weights WHERE id = ?');
 
 const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
 const setSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)');
+
+// Load model preferences after database is ready
+loadModelPreferences();
 
 // API Routes
 app.get('/api/readings', (req, res) => {
@@ -338,10 +371,15 @@ app.get('/api/analysis/enhanced', async (req, res) => {
   try {
     console.log('Enhanced AI Analysis endpoint called');
     
-    // Load API key from database
+    // Load API key and model preference from database
     const apiKeyResult = getSetting.get('huggingface_api_key');
     if (apiKeyResult) {
       aiAnalysisService.huggingFaceService.setApiKey(apiKeyResult.value);
+    }
+    
+    const modelResult = getSetting.get('huggingface_model');
+    if (modelResult) {
+      aiAnalysisService.huggingFaceService.setSelectedModel(modelResult.value);
     }
     
     const readings = getReadings.all().map(row => ({
@@ -389,9 +427,18 @@ app.post('/api/analysis/enhanced', async (req, res) => {
     
     const { apiKey } = req.body;
     
-    // Set the API key for this request
+    // Set the API key and model preference for this request
     if (apiKey) {
       aiAnalysisService.huggingFaceService.setApiKey(apiKey);
+    }
+    
+    // Load model preference from database (validate it's a valid model)
+    const modelResult = getSetting.get('huggingface_model');
+    const validModels = ['gpt2', 'distilgpt2', 'microsoft/DialoGPT-small', 'distilbert-base-uncased'];
+    if (modelResult && validModels.includes(modelResult.value)) {
+      aiAnalysisService.huggingFaceService.setSelectedModel(modelResult.value);
+    } else {
+      aiAnalysisService.huggingFaceService.setSelectedModel('gpt2');
     }
     
     const readings = getReadings.all().map(row => ({
@@ -441,9 +488,18 @@ app.post('/api/analysis/ask', async (req, res) => {
       return res.status(400).json({ error: 'Question is required' });
     }
 
-    // Set the API key for this request
+    // Set the API key and model preference for this request
     if (apiKey) {
       aiAnalysisService.huggingFaceService.setApiKey(apiKey);
+    }
+    
+    // Load model preference from database (validate it's a valid model)
+    const modelResult = getSetting.get('huggingface_model');
+    const validModels = ['gpt2', 'distilgpt2', 'microsoft/DialoGPT-small', 'distilbert-base-uncased'];
+    if (modelResult && validModels.includes(modelResult.value)) {
+      aiAnalysisService.huggingFaceService.setSelectedModel(modelResult.value);
+    } else {
+      aiAnalysisService.huggingFaceService.setSelectedModel('gpt2');
     }
 
     console.log('AI Q&A endpoint called with question:', question);
@@ -580,10 +636,11 @@ app.get('/api/analysis/debug', async (req, res) => {
 });
 
 // API key validation endpoint
-app.post('/api/analysis/test-key', (req, res) => {
+app.post('/api/analysis/test-key', async (req, res) => {
   console.log('API key validation request received');
-  const { apiKey } = req.body;
+  const { apiKey, model } = req.body;
   console.log('API key received:', apiKey ? 'present' : 'missing');
+  console.log('Model received:', model || 'default');
   
   if (!apiKey) {
     console.log('No API key provided');
@@ -596,14 +653,113 @@ app.post('/api/analysis/test-key', (req, res) => {
     return res.json({ valid: false, error: 'Invalid API key format. Hugging Face keys start with "hf_" and are longer.' });
   }
 
-  // For now, just validate the format - the actual API will be tested when used
-  console.log('API key format is valid');
-  return res.json({ valid: true, message: 'API key format is valid. You can now use enhanced AI features!' });
+  try {
+    // Set the API key on the service
+    console.log('API key before setting:', apiKey ? 'present' : 'missing', apiKey ? apiKey.substring(0, 5) + '...' : '');
+    aiAnalysisService.huggingFaceService.setApiKey(apiKey);
+    
+    // Test the API key by making a real request to HuggingFace
+    // Use a simple text classification model that's known to work with the Inference API
+    const testModel = 'distilbert-base-uncased-finetuned-sst-2-english';
+    console.log(`Testing API key with model: ${testModel}`);
+    
+    // Use the service's method to make the API call
+    const result = await aiAnalysisService.huggingFaceService.callHuggingFaceAPI("I love this product!", testModel);
+
+    console.log('API key validation successful');
+    console.log('Response:', result);
+    
+    return res.json({ 
+      valid: true, 
+      message: 'API key is valid and working! You can now use enhanced AI features.',
+      model: testModel,
+      responseTime: 'API responded successfully'
+    });
+
+  } catch (error) {
+    console.error('API key validation failed:', error.message);
+    
+    if (error.response) {
+      console.error('API Response Status:', error.response.status);
+      console.error('API Response Data:', error.response.data);
+      
+      if (error.response.status === 401) {
+        return res.json({ valid: false, error: 'Invalid API key. Please check your HuggingFace token.' });
+      } else if (error.response.status === 503) {
+        return res.json({ valid: false, error: 'Model is currently loading. Please try again in a moment.' });
+      } else if (error.response.status === 429) {
+        return res.json({ valid: false, error: 'Rate limit exceeded. Please try again later.' });
+      } else {
+        return res.json({ valid: false, error: `API error: ${error.response.status} - ${error.response.data?.error || 'Unknown error'}` });
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      return res.json({ valid: false, error: 'Request timeout. The model may be loading - this can take up to 60 seconds.' });
+    } else {
+      return res.json({ valid: false, error: `Connection error: ${error.message}` });
+    }
+  }
 });
 
 // Serve React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../build/index.html'));
+});
+
+// Direct HuggingFace verification endpoint
+app.post('/api/analysis/verify-hf', async (req, res) => {
+  try {
+    const { apiKey, model = 'gpt2', text = 'Hello, world!' } = req.body;
+    
+    if (!apiKey) {
+      return res.status(400).json({ error: 'API key is required' });
+    }
+    
+    console.log(`Making direct HuggingFace API call to model: ${model}`);
+    console.log(`API key (first 5 chars): ${apiKey.substring(0, 5)}...`);
+    
+    const startTime = Date.now();
+    
+    const response = await axios.post(
+      `https://api-inference.huggingface.co/models/${model}`,
+      { inputs: text },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      }
+    );
+    
+    const endTime = Date.now();
+    
+    console.log(`Direct HuggingFace API call succeeded in ${endTime - startTime}ms`);
+    console.log(`Status code: ${response.status}`);
+    console.log(`Response headers:`, response.headers);
+    
+    // Return full response details for verification
+    return res.json({
+      success: true,
+      responseTime: endTime - startTime,
+      statusCode: response.status,
+      headers: response.headers,
+      data: response.data,
+      model: model,
+      requestId: response.headers['x-request-id'] || 'unknown'
+    });
+  } catch (error) {
+    console.error('Direct HuggingFace API call failed:', error.message);
+    
+    // Return detailed error information
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers
+    });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
