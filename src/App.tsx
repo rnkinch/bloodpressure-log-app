@@ -13,13 +13,14 @@ import { CigarForm } from './components/CigarForm';
 import { DrinkForm } from './components/DrinkForm';
 import { WeightForm } from './components/WeightForm';
 import { LifestyleEntriesList } from './components/LifestyleEntriesList';
+import LifestyleCalendar from './components/LifestyleCalendar';
 import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, Zap } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print';
+type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print' | 'calendar';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
@@ -259,6 +260,7 @@ function App() {
               { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
               { id: 'stats', label: 'Statistics', icon: Activity },
               { id: 'lifestyle', label: 'Lifestyle', icon: Cigarette },
+              { id: 'calendar', label: 'Calendar', icon: CalendarDays },
               { id: 'print', label: 'Print Report', icon: Printer }
             ].map(({ id, label, icon: Icon }) => (
               <button
@@ -429,6 +431,16 @@ function App() {
           <div className="max-w-7xl mx-auto">
             <PrintReport
               readings={readings}
+            />
+          </div>
+        )}
+
+        {currentView === 'calendar' && (
+          <div className="max-w-7xl mx-auto">
+            <LifestyleCalendar
+              cigarEntries={cigarEntries}
+              drinkEntries={drinkEntries}
+              weightEntries={weightEntries}
             />
           </div>
         )}
