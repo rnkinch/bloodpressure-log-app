@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
 import { useWeightData } from './hooks/useWeightData';
@@ -17,7 +17,7 @@ import LifestyleCalendar from './components/LifestyleCalendar';
 import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown } from 'lucide-react';
 import './App.css';
 
 type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print' | 'calendar';
@@ -45,6 +45,22 @@ function App() {
   } = useWeightData();
   
   const [currentView, setCurrentView] = useState<ViewMode>('form');
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
@@ -253,13 +269,69 @@ function App() {
       <nav className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8">
+            {/* Add Reading Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${['form', 'cigar', 'drink', 'weight'].includes(currentView) ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Entry
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </button>
+              
+              {dropdownOpen && (
+                <div className="absolute left-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 py-1">
+                  <button
+                    onClick={() => {
+                      setCurrentView('form');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Heart className="h-4 w-4 mr-2 text-red-500" />
+                    Blood Pressure
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('cigar');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Cigarette className="h-4 w-4 mr-2 text-orange-500" />
+                    Cigar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('drink');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Wine className="h-4 w-4 mr-2 text-blue-500" />
+                    Drink
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('weight');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Scale className="h-4 w-4 mr-2 text-green-500" />
+                    Weight
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Other Navigation Items */}
             {[
-              { id: 'form', label: 'Add Reading', icon: Plus },
               { id: 'readings', label: 'All Readings', icon: List },
               { id: 'chart', label: 'Charts', icon: BarChart3 },
               { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
               { id: 'stats', label: 'Statistics', icon: Activity },
-              { id: 'lifestyle', label: 'Lifestyle', icon: Cigarette },
               { id: 'calendar', label: 'Calendar', icon: CalendarDays },
               { id: 'print', label: 'Print Report', icon: Printer }
             ].map(({ id, label, icon: Icon }) => (
