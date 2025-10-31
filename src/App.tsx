@@ -47,6 +47,7 @@ function App() {
   } = useWeightData();
   
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
+  const [activeNavGroup, setActiveNavGroup] = useState<string>('overview');
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
@@ -257,96 +258,124 @@ function App() {
           <div className="flex flex-col">
             {/* Navigation Groups */}
             <div className="flex space-x-4 py-2">
-              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
-                <Layout className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-sm font-medium text-gray-500">Overview</span>
-              </div>
-              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
-                <PenSquare className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-sm font-medium text-gray-500">Data Entry</span>
-              </div>
-              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
-                <LineChart className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-sm font-medium text-gray-500">Visualizations</span>
-              </div>
-              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
-                <Brain className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="text-sm font-medium text-gray-500">Analysis</span>
-              </div>
+              <button 
+                onClick={() => setActiveNavGroup('overview')}
+                className={`flex items-center px-3 py-1 rounded-md ${activeNavGroup === 'overview' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+              >
+                <Layout className={`h-4 w-4 mr-2 ${activeNavGroup === 'overview' ? 'text-blue-600' : 'text-gray-500'}`} />
+                <span className="text-sm font-medium">Overview</span>
+              </button>
+              <button 
+                onClick={() => setActiveNavGroup('data-entry')}
+                className={`flex items-center px-3 py-1 rounded-md ${activeNavGroup === 'data-entry' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+              >
+                <PenSquare className={`h-4 w-4 mr-2 ${activeNavGroup === 'data-entry' ? 'text-blue-600' : 'text-gray-500'}`} />
+                <span className="text-sm font-medium">Data Entry</span>
+              </button>
+              <button 
+                onClick={() => setActiveNavGroup('visualizations')}
+                className={`flex items-center px-3 py-1 rounded-md ${activeNavGroup === 'visualizations' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+              >
+                <LineChart className={`h-4 w-4 mr-2 ${activeNavGroup === 'visualizations' ? 'text-blue-600' : 'text-gray-500'}`} />
+                <span className="text-sm font-medium">Visualizations</span>
+              </button>
+              <button 
+                onClick={() => setActiveNavGroup('analysis')}
+                className={`flex items-center px-3 py-1 rounded-md ${activeNavGroup === 'analysis' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}
+              >
+                <Brain className={`h-4 w-4 mr-2 ${activeNavGroup === 'analysis' ? 'text-blue-600' : 'text-gray-500'}`} />
+                <span className="text-sm font-medium">Analysis</span>
+              </button>
             </div>
             
             {/* Navigation Items */}
             <div className="flex space-x-4 overflow-x-auto">
               {/* Overview Group */}
-              <button
-                onClick={() => setCurrentView('dashboard')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'dashboard' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <Layout className="h-4 w-4 mr-2" />
-                Dashboard
-              </button>
-              <button
-                onClick={() => setCurrentView('readings')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'readings' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <List className="h-4 w-4 mr-2" />
-                All Readings
-              </button>
+              {activeNavGroup === 'overview' && (
+                <>
+                  <button
+                    onClick={() => setCurrentView('dashboard')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'dashboard' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Layout className="h-4 w-4 mr-2" />
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('readings')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'readings' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <List className="h-4 w-4 mr-2" />
+                    All Readings
+                  </button>
+                </>
+              )}
               
               {/* Data Entry Group */}
-              <button
-                onClick={() => setCurrentView('add-entry')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'add-entry' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Entry
-              </button>
-              <button
-                onClick={() => setCurrentView('lifestyle')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'lifestyle' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <Cigarette className="h-4 w-4 mr-2" />
-                Lifestyle
-              </button>
+              {activeNavGroup === 'data-entry' && (
+                <>
+                  <button
+                    onClick={() => setCurrentView('add-entry')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'add-entry' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Entry
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('lifestyle')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'lifestyle' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Cigarette className="h-4 w-4 mr-2" />
+                    Lifestyle
+                  </button>
+                </>
+              )}
               
               {/* Visualizations Group */}
-              <button
-                onClick={() => setCurrentView('chart')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'chart' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Charts
-              </button>
-              <button
-                onClick={() => setCurrentView('calendar')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'calendar' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <CalendarDays className="h-4 w-4 mr-2" />
-                Calendar
-              </button>
-              <button
-                onClick={() => setCurrentView('stats')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'stats' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                Statistics
-              </button>
+              {activeNavGroup === 'visualizations' && (
+                <>
+                  <button
+                    onClick={() => setCurrentView('chart')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'chart' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Charts
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('calendar')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'calendar' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                    Calendar
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('stats')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'stats' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Activity className="h-4 w-4 mr-2" />
+                    Statistics
+                  </button>
+                </>
+              )}
               
               {/* Analysis Group */}
-              <button
-                onClick={() => setCurrentView('ai-assistant')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'ai-assistant' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <Brain className="h-4 w-4 mr-2" />
-                AI Assistant
-              </button>
-              <button
-                onClick={() => setCurrentView('print')}
-                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'print' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print Report
-              </button>
+              {activeNavGroup === 'analysis' && (
+                <>
+                  <button
+                    onClick={() => setCurrentView('ai-assistant')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'ai-assistant' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Brain className="h-4 w-4 mr-2" />
+                    AI Assistant
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('print')}
+                    className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'print' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Report
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -362,6 +391,10 @@ function App() {
             weightEntries={weightEntries}
             chartData={filteredChartData}
             onNavigate={(view) => setCurrentView(view as ViewMode)}
+            onNavigateToGroup={(group, view) => {
+              setActiveNavGroup(group);
+              setCurrentView(view as ViewMode);
+            }}
           />
         )}
         

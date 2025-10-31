@@ -20,6 +20,7 @@ interface DashboardProps {
   weightEntries: WeightEntry[];
   chartData: ChartDataPoint[];
   onNavigate: (view: string) => void;
+  onNavigateToGroup?: (group: string, view: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -28,7 +29,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   drinkEntries,
   weightEntries,
   chartData,
-  onNavigate
+  onNavigate,
+  onNavigateToGroup
 }) => {
   // Get the most recent reading
   const latestReading = useMemo(() => {
@@ -96,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button
-            onClick={() => onNavigate('add-entry')}
+            onClick={() => onNavigateToGroup ? onNavigateToGroup('data-entry', 'add-entry') : onNavigate('add-entry')}
             className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <div className="bg-blue-100 p-3 rounded-full mb-2">
@@ -185,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
               
               <button
-                onClick={() => onNavigate('chart')}
+                onClick={() => onNavigateToGroup ? onNavigateToGroup('visualizations', 'chart') : onNavigate('chart')}
                 className="col-span-2 flex items-center justify-center py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
@@ -253,7 +255,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="text-center py-6">
               <div className="text-gray-400 mb-2">No cigar entries</div>
               <button
-                onClick={() => onNavigate('cigar')}
+                onClick={() => onNavigateToGroup ? onNavigateToGroup('data-entry', 'add-entry') : onNavigate('add-entry')}
                 className="text-sm text-orange-600 hover:text-orange-800"
               >
                 Add Entry
@@ -306,7 +308,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="text-center py-6">
               <div className="text-gray-400 mb-2">No drink entries</div>
               <button
-                onClick={() => onNavigate('drink')}
+                onClick={() => onNavigateToGroup ? onNavigateToGroup('data-entry', 'add-entry') : onNavigate('add-entry')}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
                 Add Entry
@@ -358,7 +360,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="text-center py-6">
               <div className="text-gray-400 mb-2">No weight entries</div>
               <button
-                onClick={() => onNavigate('weight')}
+                onClick={() => onNavigateToGroup ? onNavigateToGroup('data-entry', 'add-entry') : onNavigate('add-entry')}
                 className="text-sm text-green-600 hover:text-green-800"
               >
                 Add Entry
@@ -379,7 +381,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </button>
         
         <button
-          onClick={() => onNavigate('ai-assistant')}
+            onClick={() => onNavigateToGroup ? onNavigateToGroup('analysis', 'ai-assistant') : onNavigate('ai-assistant')}
           className="flex items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <Activity className="h-5 w-5 mr-2 text-gray-600" />
