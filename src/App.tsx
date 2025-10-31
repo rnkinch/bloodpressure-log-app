@@ -14,13 +14,15 @@ import { DrinkForm } from './components/DrinkForm';
 import { WeightForm } from './components/WeightForm';
 import { LifestyleEntriesList } from './components/LifestyleEntriesList';
 import LifestyleCalendar from './components/LifestyleCalendar';
+import Dashboard from './components/Dashboard';
+import UnifiedEntryForm from './components/UnifiedEntryForm';
 import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, Layout, PenSquare, LineChart } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print' | 'calendar';
+type ViewMode = 'dashboard' | 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print' | 'calendar' | 'add-entry';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
@@ -44,7 +46,7 @@ function App() {
     deleteWeightEntry
   } = useWeightData();
   
-  const [currentView, setCurrentView] = useState<ViewMode>('form');
+  const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
@@ -252,17 +254,101 @@ function App() {
       {/* Navigation */}
       <nav className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            {[
-              { id: 'form', label: 'Add Reading', icon: Plus },
-              { id: 'readings', label: 'All Readings', icon: List },
-              { id: 'chart', label: 'Charts', icon: BarChart3 },
-              { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
-              { id: 'stats', label: 'Statistics', icon: Activity },
-              { id: 'lifestyle', label: 'Lifestyle', icon: Cigarette },
-              { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-              { id: 'print', label: 'Print Report', icon: Printer }
-            ].map(({ id, label, icon: Icon }) => (
+          <div className="flex flex-col">
+            {/* Navigation Groups */}
+            <div className="flex space-x-4 py-2">
+              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
+                <Layout className="h-4 w-4 mr-2 text-gray-500" />
+                <span className="text-sm font-medium text-gray-500">Overview</span>
+              </div>
+              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
+                <PenSquare className="h-4 w-4 mr-2 text-gray-500" />
+                <span className="text-sm font-medium text-gray-500">Data Entry</span>
+              </div>
+              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
+                <LineChart className="h-4 w-4 mr-2 text-gray-500" />
+                <span className="text-sm font-medium text-gray-500">Visualizations</span>
+              </div>
+              <div className="flex items-center px-3 py-1 bg-gray-100 rounded-md">
+                <Brain className="h-4 w-4 mr-2 text-gray-500" />
+                <span className="text-sm font-medium text-gray-500">Analysis</span>
+              </div>
+            </div>
+            
+            {/* Navigation Items */}
+            <div className="flex space-x-4 overflow-x-auto">
+              {/* Overview Group */}
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'dashboard' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Layout className="h-4 w-4 mr-2" />
+                Dashboard
+              </button>
+              <button
+                onClick={() => setCurrentView('readings')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'readings' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <List className="h-4 w-4 mr-2" />
+                All Readings
+              </button>
+              
+              {/* Data Entry Group */}
+              <button
+                onClick={() => setCurrentView('add-entry')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'add-entry' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Entry
+              </button>
+              <button
+                onClick={() => setCurrentView('lifestyle')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'lifestyle' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Cigarette className="h-4 w-4 mr-2" />
+                Lifestyle
+              </button>
+              
+              {/* Visualizations Group */}
+              <button
+                onClick={() => setCurrentView('chart')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'chart' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Charts
+              </button>
+              <button
+                onClick={() => setCurrentView('calendar')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'calendar' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Calendar
+              </button>
+              <button
+                onClick={() => setCurrentView('stats')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'stats' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                Statistics
+              </button>
+              
+              {/* Analysis Group */}
+              <button
+                onClick={() => setCurrentView('ai-assistant')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'ai-assistant' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Brain className="h-4 w-4 mr-2" />
+                AI Assistant
+              </button>
+              <button
+                onClick={() => setCurrentView('print')}
+                className={`flex items-center px-3 py-3 text-sm font-medium border-b-2 transition-colors ${currentView === 'print' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Report
+              </button>
+            </div>
+          </div>
               <button
                 key={id}
                 onClick={() => setCurrentView(id as ViewMode)}
@@ -282,6 +368,41 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentView === 'dashboard' && (
+          <Dashboard
+            readings={readings}
+            cigarEntries={cigarEntries}
+            drinkEntries={drinkEntries}
+            weightEntries={weightEntries}
+            chartData={filteredChartData}
+            onNavigate={(view) => setCurrentView(view as ViewMode)}
+          />
+        )}
+        
+        {currentView === 'add-entry' && (
+          <UnifiedEntryForm
+            onSubmitBP={editingReading ? handleUpdateReading : handleAddReading}
+            onCancelBP={editingReading ? handleCancelEdit : undefined}
+            initialBPData={editingReading}
+            isEditingBP={!!editingReading}
+            
+            onSubmitCigar={editingCigar ? handleUpdateCigar : handleAddCigar}
+            onCancelCigar={editingCigar ? handleCancelCigarEdit : undefined}
+            initialCigarData={editingCigar}
+            isEditingCigar={!!editingCigar}
+            
+            onSubmitDrink={editingDrink ? handleUpdateDrink : handleAddDrink}
+            onCancelDrink={editingDrink ? handleCancelDrinkEdit : undefined}
+            initialDrinkData={editingDrink}
+            isEditingDrink={!!editingDrink}
+            
+            onSubmitWeight={editingWeight ? handleUpdateWeight : handleAddWeight}
+            onCancelWeight={editingWeight ? handleCancelWeightEdit : undefined}
+            initialWeightData={editingWeight}
+            isEditingWeight={!!editingWeight}
+          />
+        )}
+        
         {currentView === 'form' && (
           <div className="max-w-2xl mx-auto">
             <BloodPressureForm
