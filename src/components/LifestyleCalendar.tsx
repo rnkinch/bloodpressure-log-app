@@ -3,8 +3,8 @@ import { Calendar, Views } from 'react-big-calendar';
 import { format, parseISO, startOfDay } from 'date-fns';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './LifestyleCalendar.css';
-import { CigarEntry, DrinkEntry, WeightEntry } from '../types';
-import { Cigarette, Wine, Scale } from 'lucide-react';
+import { CardioEntry, CigarEntry, DrinkEntry, WeightEntry } from '../types';
+import { Cigarette, Wine, Scale, Activity } from 'lucide-react';
 
 // Setup the localizer for react-big-calendar using date-fns
 import { dateFnsLocalizer } from 'react-big-calendar';
@@ -29,8 +29,8 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  type: 'cigar' | 'drink' | 'weight';
-  data: CigarEntry | DrinkEntry | WeightEntry;
+  type: 'cigar' | 'drink' | 'weight' | 'cardio';
+  data: CigarEntry | DrinkEntry | WeightEntry | CardioEntry;
 }
 
 // Define props for the LifestyleCalendar component
@@ -38,6 +38,7 @@ interface LifestyleCalendarProps {
   cigarEntries: CigarEntry[];
   drinkEntries: DrinkEntry[];
   weightEntries: WeightEntry[];
+  cardioEntries: CardioEntry[];
 }
 
 // Define the detail view component for a selected day
@@ -152,6 +153,34 @@ const DayDetail: React.FC<DayDetailProps> = ({ date, events, onClose }) => {
                 </ul>
               </div>
             )}
+
+            {events.filter(e => e.type === 'cardio').length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold flex items-center">
+                  <Activity className="h-5 w-5 mr-2 text-purple-600" />
+                  Cardio Sessions
+                </h3>
+                <ul className="mt-2 space-y-2">
+                  {events
+                    .filter(e => e.type === 'cardio')
+                    .map(event => {
+                      const cardio = event.data as CardioEntry;
+                      return (
+                        <li key={event.id} className="bg-purple-50 p-3 rounded-md">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{cardio.activity}</span>
+                            <span className="text-sm text-gray-500">
+                              {format(cardio.timestamp, 'h:mm a')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">Duration: {cardio.minutes} min</p>
+                          {cardio.notes && <p className="text-sm mt-1 text-gray-600">{cardio.notes}</p>}
+                        </li>
+                      );
+                    })}
+                </ul>
+              </div>
+            )}
           </div>
         )}
         
@@ -172,6 +201,7 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
   cigarEntries,
   drinkEntries,
   weightEntries,
+  cardioEntries,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
@@ -179,6 +209,7 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
     cigar: true,
     drink: true,
     weight: true,
+    cardio: true,
   });
 
   // Transform the lifestyle data into calendar events
@@ -226,9 +257,22 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
         });
       });
     }
+
+    if (filters.cardio) {
+      cardioEntries.forEach(entry => {
+        allEvents.push({
+          id: `cardio-${entry.id}`,
+          title: `${entry.activity}: ${entry.minutes} min`,
+          start: entry.timestamp,
+          end: entry.timestamp,
+          type: 'cardio',
+          data: entry,
+        });
+      });
+    }
     
     return allEvents;
-  }, [cigarEntries, drinkEntries, weightEntries, filters]);
+  }, [cigarEntries, drinkEntries, weightEntries, cardioEntries, filters]);
 
   // Handle day selection
   const handleSelectSlot = ({ start }: { start: Date }) => {
@@ -256,6 +300,9 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
       case 'weight':
         backgroundColor = '#16a34a'; // green-600
         break;
+      case 'cardio':
+        backgroundColor = '#7c3aed'; // purple-600
+        break;
     }
     
     return {
@@ -272,7 +319,7 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
   };
 
   // Toggle filter
-  const toggleFilter = (type: 'cigar' | 'drink' | 'weight') => {
+  const toggleFilter = (type: 'cigar' | 'drink' | 'weight' | 'cardio') => {
     setFilters(prev => ({
       ...prev,
       [type]: !prev[type],
@@ -316,6 +363,17 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
           >
             <Scale className={`h-4 w-4 mr-1 ${filters.weight ? 'text-green-600' : 'text-gray-400'}`} />
             Weight
+          </button>
+          <button
+            onClick={() => toggleFilter('cardio')}
+            className={`flex items-center px-3 py-1 rounded-full text-sm ${
+              filters.cardio
+                ? 'bg-purple-100 text-purple-800'
+                : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            <Activity className={`h-4 w-4 mr-1 ${filters.cardio ? 'text-purple-600' : 'text-gray-400'}`} />
+            Cardio
           </button>
         </div>
       </div>

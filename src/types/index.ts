@@ -24,6 +24,14 @@ export interface DrinkEntry {
   notes?: string;
 }
 
+export interface CardioEntry {
+  id: string;
+  activity: string;
+  minutes: number;
+  timestamp: Date;
+  notes?: string;
+}
+
 export interface WeightEntry {
   id: string;
   weight: number;
@@ -63,6 +71,8 @@ export interface ChartDataPoint {
     drinks?: number;
     alcoholContent?: number;
     weight?: number;
+    cardioMinutes?: number;
+    cardioActivities?: string[];
   };
 }
 

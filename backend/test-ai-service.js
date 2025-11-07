@@ -91,7 +91,9 @@ async function testAIService() {
     const analysis = await aiService.generateAdvancedAnalysis(
       sampleReadings,
       sampleCigarEntries, 
-      sampleDrinkEntries
+      sampleDrinkEntries,
+      [],
+      []
     );
     
     console.log('✅ Analysis generated successfully!\n');

@@ -86,6 +86,14 @@ db.exec(`CREATE TABLE IF NOT EXISTS weights (
   notes TEXT
 )`);
 
+db.exec(`CREATE TABLE IF NOT EXISTS cardio (
+  id TEXT PRIMARY KEY,
+  activity TEXT NOT NULL,
+  minutes INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
+  notes TEXT
+)`);
+
 db.exec(`CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -112,6 +120,11 @@ const getWeights = db.prepare('SELECT * FROM weights ORDER BY timestamp DESC');
 const insertWeight = db.prepare('INSERT INTO weights (id, weight, timestamp, notes) VALUES (?, ?, ?, ?)');
 const updateWeight = db.prepare('UPDATE weights SET weight = ?, timestamp = ?, notes = ? WHERE id = ?');
 const deleteWeight = db.prepare('DELETE FROM weights WHERE id = ?');
+
+const getCardio = db.prepare('SELECT * FROM cardio ORDER BY timestamp DESC');
+const insertCardio = db.prepare('INSERT INTO cardio (id, activity, minutes, timestamp, notes) VALUES (?, ?, ?, ?, ?)');
+const updateCardio = db.prepare('UPDATE cardio SET activity = ?, minutes = ?, timestamp = ?, notes = ? WHERE id = ?');
+const deleteCardio = db.prepare('DELETE FROM cardio WHERE id = ?');
 
 const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
 const setSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)');
@@ -251,6 +264,50 @@ app.delete('/api/drinks/:id', (req, res) => {
   }
 });
 
+// Cardio endpoints
+app.get('/api/cardio', (req, res) => {
+  try {
+    const rows = getCardio.all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/cardio', (req, res) => {
+  try {
+    const { activity, minutes, timestamp, notes } = req.body;
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
+
+    insertCardio.run(id, activity, minutes, timestamp, notes);
+    res.json({ id, activity, minutes, timestamp, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/cardio/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { activity, minutes, timestamp, notes } = req.body;
+
+    updateCardio.run(activity, minutes, timestamp, notes, id);
+    res.json({ id, activity, minutes, timestamp, notes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/cardio/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    deleteCardio.run(id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Weight endpoints
 app.get('/api/weights', (req, res) => {
   try {
@@ -344,13 +401,19 @@ app.get('/api/analysis/advanced', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
-    console.log(`Found ${cigarEntries.length} cigar entries, ${drinkEntries.length} drink entries, ${weightEntries.length} weight entries`);
+    const cardioEntries = getCardio.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
+    console.log(`Found ${cigarEntries.length} cigar entries, ${drinkEntries.length} drink entries, ${weightEntries.length} weight entries, ${cardioEntries.length} cardio entries`);
 
     const analysis = await aiAnalysisService.generateAdvancedAnalysis(
       readings, 
       cigarEntries, 
       drinkEntries,
-      weightEntries
+      weightEntries,
+      cardioEntries
     );
 
     console.log('Analysis generated successfully');
@@ -402,11 +465,17 @@ app.get('/api/analysis/enhanced', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const cardioEntries = getCardio.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
       readings, 
       cigarEntries, 
       drinkEntries,
-      weightEntries
+      weightEntries,
+      cardioEntries
     );
 
     console.log('Enhanced analysis generated successfully');
@@ -461,11 +530,17 @@ app.post('/api/analysis/enhanced', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const cardioEntries = getCardio.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
       readings, 
       cigarEntries, 
       drinkEntries,
-      weightEntries
+      weightEntries,
+      cardioEntries
     );
 
     console.log('Enhanced analysis generated successfully');
@@ -524,12 +599,18 @@ app.post('/api/analysis/ask', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const cardioEntries = getCardio.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const answer = await aiAnalysisService.answerUserQuestion(
       question,
       readings, 
       cigarEntries, 
       drinkEntries,
-      weightEntries
+      weightEntries,
+      cardioEntries
     );
 
     console.log('AI Q&A response generated successfully');
@@ -568,11 +649,17 @@ app.get('/api/analysis/report', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const cardioEntries = getCardio.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const report = await aiAnalysisService.generateHealthReport(
       readings, 
       cigarEntries, 
       drinkEntries,
-      weightEntries
+      weightEntries,
+      cardioEntries
     );
 
     console.log('Health report generated successfully');
@@ -615,7 +702,7 @@ app.get('/api/analysis/debug', async (req, res) => {
       }
     ];
 
-    const analysis = await aiAnalysisService.generateAdvancedAnalysis(testReadings, [], []);
+    const analysis = await aiAnalysisService.generateAdvancedAnalysis(testReadings, [], [], [], []);
     res.json({ 
       status: 'success', 
       message: 'AI service working',

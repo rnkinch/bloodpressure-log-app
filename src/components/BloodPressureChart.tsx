@@ -158,6 +158,14 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
                           {data.lifestyle.alcoholContent > 0 && (
                             <p className="text-xs text-gray-500">({data.lifestyle.alcoholContent.toFixed(1)}% ABV avg)</p>
                           )}
+                          {data.lifestyle.cardioMinutes && data.lifestyle.cardioMinutes > 0 && (
+                            <p className="text-xs text-purple-600">🏃‍♂️ {data.lifestyle.cardioMinutes} min cardio</p>
+                          )}
+                          {data.lifestyle.cardioActivities && data.lifestyle.cardioActivities.length > 0 && (
+                            <p className="text-[10px] text-gray-500">
+                              {data.lifestyle.cardioActivities.join(', ')}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

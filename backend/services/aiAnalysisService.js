@@ -84,7 +84,7 @@ class AIAnalysisService {
     };
   }
 
-  async generateAdvancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
+  async generateAdvancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
     if (!readings || readings.length === 0) {
       return this.getInsufficientDataResponse();
     }
@@ -94,7 +94,7 @@ class AIAnalysisService {
       dataQuality: this.assessDataQuality(readings),
       riskAssessment: this.performAdvancedRiskAssessment(readings),
       trendAnalysis: this.performAdvancedTrendAnalysis(readings),
-      lifestyleCorrelation: this.analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries),
+      lifestyleCorrelation: this.analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries),
       circadianAnalysis: this.analyzeCircadianPatterns(readings),
       predictiveInsights: this.generatePredictiveInsights(readings),
       personalizedRecommendations: [],
@@ -198,11 +198,12 @@ class AIAnalysisService {
     };
   }
 
-  analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries) {
+  analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries) {
     const correlations = {
       smoking: this.analyzeSmokingCorrelation(readings, cigarEntries),
       alcohol: this.analyzeAlcoholCorrelation(readings, drinkEntries),
       weight: this.analyzeWeightCorrelation(readings, weightEntries),
+      cardio: this.analyzeCardioCorrelation(readings, cardioEntries),
       combined: { impact: 'none', confidence: 'low' }
     };
 
@@ -370,6 +371,79 @@ class AIAnalysisService {
       healthRiskLevel: healthRiskLevel,
       bpSensitivity: weightBPSensitivity.toFixed(2),
       recommendations: recommendations
+    };
+  }
+
+  analyzeCardioCorrelation(readings, cardioEntries) {
+    if (!cardioEntries || cardioEntries.length === 0) {
+      return {
+        impact: 'no_data',
+        confidence: 'low',
+        averageMinutes: 0,
+        sessions: 0,
+        recommendations: ['Log cardio activities to see how exercise impacts your readings.']
+      };
+    }
+
+    const totalMinutes = cardioEntries.reduce((sum, entry) => sum + (entry.minutes || 0), 0);
+    const sessions = cardioEntries.length;
+    const averageMinutes = sessions > 0 ? totalMinutes / sessions : 0;
+
+    const cardioDays = new Set(cardioEntries.map(entry => new Date(entry.timestamp).toDateString()));
+    const cardioDayReadings = readings.filter(reading => cardioDays.has(new Date(reading.timestamp).toDateString()));
+    const nonCardioReadings = readings.filter(reading => !cardioDays.has(new Date(reading.timestamp).toDateString()));
+
+    if (cardioDayReadings.length === 0 || nonCardioReadings.length === 0) {
+      return {
+        impact: 'insufficient_data',
+        confidence: 'low',
+        averageMinutes: parseFloat(averageMinutes.toFixed(1)),
+        sessions,
+        recommendations: ['Keep logging blood pressure readings on cardio days to spot trends.']
+      };
+    }
+
+    const cardioAvgSystolic = this.mean(cardioDayReadings.map(r => r.systolic));
+    const cardioAvgDiastolic = this.mean(cardioDayReadings.map(r => r.diastolic));
+    const nonCardioAvgSystolic = this.mean(nonCardioReadings.map(r => r.systolic));
+    const nonCardioAvgDiastolic = this.mean(nonCardioReadings.map(r => r.diastolic));
+
+    const systolicDelta = nonCardioAvgSystolic - cardioAvgSystolic;
+    const diastolicDelta = nonCardioAvgDiastolic - cardioAvgDiastolic;
+    const combinedDelta = (systolicDelta + diastolicDelta) / 2;
+
+    let impact = 'neutral';
+    if (combinedDelta > 3) {
+      impact = 'beneficial';
+    } else if (combinedDelta < -3) {
+      impact = 'potentially_negative';
+    }
+
+    const confidence = cardioDayReadings.length + nonCardioReadings.length > 6 ? 'medium' : 'low';
+
+    const recommendations = [];
+    if (impact === 'beneficial') {
+      recommendations.push('Regular cardio appears to lower your blood pressure—keep it up!');
+    } else if (impact === 'potentially_negative') {
+      recommendations.push('Cardio days show higher readings—review workout intensity and recovery.');
+    } else {
+      recommendations.push('Maintain consistent cardio sessions to improve cardiovascular health.');
+    }
+
+    if (averageMinutes < 30) {
+      recommendations.push('Aim for at least 30 minutes of cardio to maximize heart health benefits.');
+    }
+
+    return {
+      impact,
+      confidence,
+      averageMinutes: parseFloat(averageMinutes.toFixed(1)),
+      sessions,
+      systolicDelta: parseFloat(systolicDelta.toFixed(2)),
+      diastolicDelta: parseFloat(diastolicDelta.toFixed(2)),
+      readingsOnCardioDays: cardioDayReadings.length,
+      readingsOnNonCardioDays: nonCardioReadings.length,
+      recommendations
     };
   }
   
@@ -862,6 +936,9 @@ class AIAnalysisService {
     if (correlations.alcohol.heavyDrinking?.impact === 'significant') score += 3;
     else if (correlations.alcohol.moderateDrinking?.impact === 'moderate') score += 2;
     
+    if (correlations.cardio?.impact === 'potentially_negative') score += 2;
+    else if (correlations.cardio?.impact === 'beneficial') score = Math.max(score - 1, 0);
+
     return Math.min(score, 8);
   }
 
@@ -876,6 +953,12 @@ class AIAnalysisService {
       recommendations.push('Reduce alcohol consumption to moderate levels (1-2 drinks per day)');
     }
     
+    if (correlations.cardio?.impact === 'beneficial') {
+      recommendations.push('Continue regular cardio sessions—they are linked with better readings.');
+    } else if (correlations.cardio?.impact === 'potentially_negative') {
+      recommendations.push('Review cardio intensity and recovery since readings rise on workout days.');
+    }
+
     return recommendations;
   }
 
@@ -1041,9 +1124,9 @@ class AIAnalysisService {
   }
 
   // New Hugging Face enhanced methods
-  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
+  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
     // Generate the existing statistical analysis
-    const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
+      const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries);
     
     try {
       // Enhance with Hugging Face insights
@@ -1074,13 +1157,14 @@ class AIAnalysisService {
     }
   }
 
-  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
+  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
     try {
       const userData = {
         readings: readings,
         cigars: cigarEntries,
         drinks: drinkEntries,
-        weights: weightEntries
+        weights: weightEntries,
+        cardio: cardioEntries
       };
 
       const answer = await this.huggingFaceService.answerQuestion(question, userData);
@@ -1111,10 +1195,10 @@ class AIAnalysisService {
     }
   }
 
-  async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = []) {
+  async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
     try {
       // Generate enhanced analysis with AI insights
-      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
+      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries);
       
       // Create a prompt for the health report
       const reportPrompt = this.createHealthReportPrompt(analysis);
@@ -1140,7 +1224,7 @@ class AIAnalysisService {
       console.error('Error generating health report:', error);
       
       // If there's an error with the AI, still provide a basic report
-      const basicAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries);
+      const basicAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries);
       
       return {
         report: 'Unable to generate AI-powered health report at this time. Please ensure your API key is configured correctly and try again.',
@@ -1166,6 +1250,12 @@ class AIAnalysisService {
     const weightImpact = weightData?.impact || 'no data';
     const bmiCategory = weightData?.bmiCategory || 'unknown';
     const recentWeight = weightData?.recentWeight || 'no data';
+    const cardioData = analysis.lifestyleCorrelation?.cardio || {};
+    const hasCardioData = Object.keys(cardioData).length > 0 && cardioData.impact && cardioData.impact !== 'no_data';
+    const cardioImpact = cardioData?.impact || 'no data';
+    const cardioAverageMinutes = cardioData?.averageMinutes ?? 0;
+    const cardioSessions = cardioData?.sessions ?? 0;
+    const cardioRecommendations = cardioData?.recommendations || [];
     
     return `You are a cardiologist creating a comprehensive blood pressure health report for a patient. Use the following data to generate a professional medical report:
 
@@ -1197,6 +1287,12 @@ WEIGHT ASSESSMENT:
 - BP Correlation: ${weightCorrelation.toFixed(2)}
 - Impact on BP: ${weightImpact}
 ${hasWeightData ? `- Weight Recommendations: ${weightData?.recommendations?.join(', ') || 'none available'}` : ''}
+
+CARDIO ACTIVITY:
+- Impact: ${cardioImpact}
+- Average Minutes per Session: ${cardioAverageMinutes}
+- Sessions Logged: ${cardioSessions}
+${hasCardioData ? `- Cardio Recommendations: ${cardioRecommendations.join(', ')}` : ''}
 
 CIRCADIAN PATTERNS:
 - Morning Average: ${analysis.circadianAnalysis?.morning?.averageSystolic || 0}/${analysis.circadianAnalysis?.morning?.averageDiastolic || 0}

@@ -1,31 +1,38 @@
 import React from 'react';
-import { CigarEntry, DrinkEntry } from '../types';
-import { Edit, Trash2, Calendar, Cigarette, Wine } from 'lucide-react';
+import { CardioEntry, CigarEntry, DrinkEntry } from '../types';
+import { Edit, Trash2, Calendar, Cigarette, Wine, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface LifestyleEntriesListProps {
   cigarEntries: CigarEntry[];
   drinkEntries: DrinkEntry[];
+  cardioEntries: CardioEntry[];
   onEditCigar: (entry: CigarEntry) => void;
   onDeleteCigar: (id: string) => void;
   onEditDrink: (entry: DrinkEntry) => void;
   onDeleteDrink: (id: string) => void;
+  onEditCardio: (entry: CardioEntry) => void;
+  onDeleteCardio: (id: string) => void;
 }
 
 export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
   cigarEntries,
   drinkEntries,
+  cardioEntries,
   onEditCigar,
   onDeleteCigar,
   onEditDrink,
-  onDeleteDrink
+  onDeleteDrink,
+  onEditCardio,
+  onDeleteCardio
 }) => {
   // Create separate arrays for cigars and drinks, keeping original data intact
   const cigarList = cigarEntries.map(entry => ({ ...entry, entryType: 'cigar' as const }));
   const drinkList = drinkEntries.map(entry => ({ ...entry, entryType: 'drink' as const }));
+  const cardioList = cardioEntries.map(entry => ({ ...entry, entryType: 'cardio' as const }));
   
   // Combine and sort by timestamp
-  const allEntries = [...cigarList, ...drinkList].sort(
+  const allEntries = [...cigarList, ...drinkList, ...cardioList].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
@@ -36,9 +43,10 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
           <div className="flex justify-center space-x-4 mb-4">
             <Cigarette className="h-12 w-12 text-gray-400" />
             <Wine className="h-12 w-12 text-gray-400" />
+            <Activity className="h-12 w-12 text-gray-400" />
           </div>
           <p className="text-gray-500 text-lg">No lifestyle entries yet</p>
-          <p className="text-gray-400 text-sm">Add your first cigar or drink entry</p>
+          <p className="text-gray-400 text-sm">Add your first cigar, drink, or cardio entry</p>
         </div>
       </div>
     );
@@ -79,7 +87,7 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
                         </span>
                       )}
                     </>
-                  ) : (
+                  ) : entry.entryType === 'drink' ? (
                     <>
                       <div className="flex items-center gap-2">
                         <Wine className="h-5 w-5 text-blue-600" />
@@ -96,13 +104,31 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
                         </span>
                       )}
                     </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-purple-600" />
+                        <span className="text-lg font-bold text-gray-900">
+                          {(entry as CardioEntry).activity}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {(entry as CardioEntry).minutes} minute{(entry as CardioEntry).minutes !== 1 ? 's' : ''}
+                      </span>
+                    </>
                   )}
                   <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                     entry.entryType === 'cigar' 
                       ? 'bg-orange-100 text-orange-700' 
-                      : 'bg-blue-100 text-blue-700'
+                      : entry.entryType === 'drink'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-purple-100 text-purple-700'
                   }`}>
-                    {entry.entryType === 'cigar' ? '🚬 Cigar' : `🍷 ${entry.type || 'Unknown'}`}
+                    {entry.entryType === 'cigar'
+                      ? '🚬 Cigar'
+                      : entry.entryType === 'drink'
+                        ? `🍷 ${entry.type || 'Unknown'}`
+                        : '🏃‍♂️ Cardio'}
                   </div>
                 </div>
                 
@@ -120,20 +146,30 @@ export const LifestyleEntriesList: React.FC<LifestyleEntriesListProps> = ({
               
               <div className="flex gap-2 ml-4">
                 <button
-                  onClick={() => entry.entryType === 'cigar' 
-                    ? onEditCigar(entry as CigarEntry) 
-                    : onEditDrink(entry as DrinkEntry)
-                  }
+                  onClick={() => {
+                    if (entry.entryType === 'cigar') {
+                      onEditCigar(entry as CigarEntry);
+                    } else if (entry.entryType === 'drink') {
+                      onEditDrink(entry as DrinkEntry);
+                    } else {
+                      onEditCardio(entry as CardioEntry);
+                    }
+                  }}
                   className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                   title="Edit entry"
                 >
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => entry.entryType === 'cigar' 
-                    ? onDeleteCigar(entry.id) 
-                    : onDeleteDrink(entry.id)
-                  }
+                  onClick={() => {
+                    if (entry.entryType === 'cigar') {
+                      onDeleteCigar(entry.id);
+                    } else if (entry.entryType === 'drink') {
+                      onDeleteDrink(entry.id);
+                    } else {
+                      onDeleteCardio(entry.id);
+                    }
+                  }}
                   className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                   title="Delete entry"
                 >

@@ -322,7 +322,8 @@ export const prepareChartData = (
   readings: BloodPressureReading[], 
   cigarEntries: any[] = [], 
   drinkEntries: any[] = [],
-  weightEntries: any[] = []
+  weightEntries: any[] = [],
+  cardioEntries: any[] = []
 ): ChartDataPoint[] => {
   return readings
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
@@ -341,6 +342,9 @@ export const prepareChartData = (
       const sameDayWeights = weightEntries.filter(entry => 
         new Date(entry.timestamp).toDateString() === readingDate.toDateString()
       );
+      const sameDayCardio = cardioEntries.filter(entry => 
+        new Date(entry.timestamp).toDateString() === readingDate.toDateString()
+      );
       
       const totalCigars = sameDayCigars.reduce((sum, entry) => sum + entry.count, 0);
       const totalDrinks = sameDayDrinks.reduce((sum, entry) => sum + entry.count, 0);
@@ -348,6 +352,19 @@ export const prepareChartData = (
         ? sameDayDrinks.reduce((sum, entry) => sum + (entry.alcoholContent || 0), 0) / sameDayDrinks.length 
         : 0;
       const latestWeight = sameDayWeights.length > 0 ? sameDayWeights[sameDayWeights.length - 1].weight : undefined;
+      const totalCardioMinutes = sameDayCardio.reduce((sum, entry) => sum + (entry.minutes || 0), 0);
+      const cardioActivities = sameDayCardio
+        .map(entry => entry.activity)
+        .filter((activity: string | undefined) => !!activity);
+
+      const lifestyleData: ChartDataPoint['lifestyle'] = {};
+
+      if (totalCigars > 0) lifestyleData.cigars = totalCigars;
+      if (totalDrinks > 0) lifestyleData.drinks = totalDrinks;
+      if (avgAlcoholContent > 0) lifestyleData.alcoholContent = avgAlcoholContent;
+      if (latestWeight !== undefined) lifestyleData.weight = latestWeight;
+      if (totalCardioMinutes > 0) lifestyleData.cardioMinutes = totalCardioMinutes;
+      if (cardioActivities.length > 0) lifestyleData.cardioActivities = cardioActivities;
 
       return {
         date: format(localDate, 'MMM dd'),
@@ -355,12 +372,7 @@ export const prepareChartData = (
         diastolic: reading.diastolic,
         heartRate: reading.heartRate,
         timestamp: reading.timestamp.getTime(),
-        lifestyle: (totalCigars > 0 || totalDrinks > 0 || latestWeight !== undefined) ? {
-          cigars: totalCigars,
-          drinks: totalDrinks,
-          alcoholContent: avgAlcoholContent,
-          weight: latestWeight
-        } : undefined
+        lifestyle: Object.keys(lifestyleData).length > 0 ? lifestyleData : undefined
       };
     });
 };

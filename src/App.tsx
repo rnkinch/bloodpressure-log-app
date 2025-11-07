@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
 import { useWeightData } from './hooks/useWeightData';
-import { DrinkEntry, WeightEntry } from './types';
+import { CardioEntry, DrinkEntry, WeightEntry } from './types';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
@@ -11,6 +11,7 @@ import { BloodPressureStatsComponent } from './components/BloodPressureStats';
 import { ReadingsList } from './components/ReadingsList';
 import { CigarForm } from './components/CigarForm';
 import { DrinkForm } from './components/DrinkForm';
+import CardioForm from './components/CardioForm';
 import { WeightForm } from './components/WeightForm';
 import { LifestyleEntriesList } from './components/LifestyleEntriesList';
 import LifestyleCalendar from './components/LifestyleCalendar';
@@ -20,20 +21,24 @@ import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysi
 import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'weight' | 'lifestyle' | 'print' | 'calendar';
+type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'cardio' | 'weight' | 'lifestyle' | 'print' | 'calendar';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
   const { 
     cigarEntries, 
     drinkEntries, 
+    cardioEntries,
     loading: lifestyleLoading,
     addCigarEntry,
     updateCigarEntry,
     deleteCigarEntry,
     addDrinkEntry,
     updateDrinkEntry,
-    deleteDrinkEntry
+    deleteDrinkEntry,
+    addCardioEntry,
+    updateCardioEntry,
+    deleteCardioEntry
   } = useLifestyleData();
   
   const {
@@ -65,6 +70,7 @@ function App() {
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
   const [editingDrink, setEditingDrink] = useState<DrinkEntry | null>(null);
+  const [editingCardio, setEditingCardio] = useState<CardioEntry | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightEntry | null>(null);
   
   const filteredChartData = useMemo(() => {
@@ -79,8 +85,8 @@ function App() {
       filtered = readings.filter(r => r.timestamp >= monthAgo);
     }
     
-    return prepareChartData(filtered, cigarEntries, drinkEntries, weightEntries);
-  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries]);
+    return prepareChartData(filtered, cigarEntries, drinkEntries, weightEntries, cardioEntries);
+  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries, cardioEntries]);
 
   const stats = useMemo(() => calculateStats(readings, chartPeriod), [readings, chartPeriod]);
   const analysis = useMemo(() => analyzeTrends(readings, cigarEntries, drinkEntries), [readings, cigarEntries, drinkEntries]);
@@ -192,6 +198,46 @@ function App() {
     setCurrentView('lifestyle');
   };
 
+  // Cardio handlers
+  const handleAddCardio = async (cardio: Omit<CardioEntry, 'id'>) => {
+    try {
+      await addCardioEntry(cardio);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to add cardio entry:', error);
+    }
+  };
+
+  const handleEditCardio = (cardio: CardioEntry) => {
+    setEditingCardio(cardio);
+    setCurrentView('cardio');
+  };
+
+  const handleUpdateCardio = async (cardio: Omit<CardioEntry, 'id'>) => {
+    if (!editingCardio) return;
+
+    try {
+      await updateCardioEntry(editingCardio.id, cardio);
+      setEditingCardio(null);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to update cardio entry:', error);
+    }
+  };
+
+  const handleDeleteCardio = async (id: string) => {
+    try {
+      await deleteCardioEntry(id);
+    } catch (error) {
+      console.error('Failed to delete cardio entry:', error);
+    }
+  };
+
+  const handleCancelCardioEdit = () => {
+    setEditingCardio(null);
+    setCurrentView('lifestyle');
+  };
+
   // Weight handlers
   const handleAddWeight = async (weight: any) => {
     try {
@@ -273,7 +319,7 @@ function App() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${['form', 'cigar', 'drink', 'weight'].includes(currentView) ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${['form', 'cigar', 'drink', 'cardio', 'weight'].includes(currentView) ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Entry
@@ -311,6 +357,16 @@ function App() {
                   >
                     <Wine className="h-4 w-4 mr-2 text-blue-500" />
                     Drink
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentView('cardio');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Activity className="h-4 w-4 mr-2 text-purple-500" />
+                    Cardio
                   </button>
                   <button
                     onClick={() => {
@@ -436,6 +492,28 @@ function App() {
           </div>
         )}
 
+        {currentView === 'cardio' && (
+          <div className="max-w-2xl mx-auto">
+            {editingCardio ? (
+              <CardioForm
+                key={editingCardio.id}
+                onSubmit={handleUpdateCardio}
+                onCancel={handleCancelCardioEdit}
+                initialData={editingCardio}
+                isEditing={true}
+              />
+            ) : (
+              <CardioForm
+                key="new"
+                onSubmit={handleAddCardio}
+                onCancel={undefined}
+                initialData={undefined}
+                isEditing={false}
+              />
+            )}
+          </div>
+        )}
+
         {currentView === 'weight' && (
           <div className="max-w-2xl mx-auto">
             {editingWeight ? (
@@ -476,6 +554,13 @@ function App() {
                 Add Drink Entry
               </button>
               <button
+                onClick={() => setCurrentView('cardio')}
+                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                Add Cardio Entry
+              </button>
+              <button
                 onClick={() => setCurrentView('weight')}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
@@ -486,10 +571,13 @@ function App() {
             <LifestyleEntriesList
               cigarEntries={cigarEntries}
               drinkEntries={drinkEntries}
+              cardioEntries={cardioEntries}
               onEditCigar={handleEditCigar}
               onDeleteCigar={handleDeleteCigar}
               onEditDrink={handleEditDrink}
               onDeleteDrink={handleDeleteDrink}
+              onEditCardio={handleEditCardio}
+              onDeleteCardio={handleDeleteCardio}
             />
             <WeightEntriesList
               weightEntries={weightEntries}
@@ -513,6 +601,7 @@ function App() {
               cigarEntries={cigarEntries}
               drinkEntries={drinkEntries}
               weightEntries={weightEntries}
+              cardioEntries={cardioEntries}
             />
           </div>
         )}

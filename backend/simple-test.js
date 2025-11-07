@@ -26,7 +26,7 @@ const testReadings = [
 async function test() {
   try {
     console.log('Generating analysis...');
-    const analysis = await aiService.generateAdvancedAnalysis(testReadings, [], []);
+    const analysis = await aiService.generateAdvancedAnalysis(testReadings, [], [], [], []);
     console.log('✅ Analysis generated successfully!');
     console.log('Risk Assessment:', analysis.riskAssessment?.overall || 'N/A');
     console.log('Data Quality:', analysis.dataQuality?.quality || 'N/A');

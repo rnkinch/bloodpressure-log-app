@@ -1,4 +1,4 @@
-import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry } from '../types';
+import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry, CardioEntry } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -141,6 +141,52 @@ export const api = {
     });
     if (!response.ok) {
       throw new Error('Failed to delete drink entry');
+    }
+  },
+
+  // Cardio entries
+  getCardioEntries: async (): Promise<CardioEntry[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/cardio`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch cardio entries');
+    }
+    return response.json();
+  },
+
+  addCardioEntry: async (entry: Omit<CardioEntry, 'id'>): Promise<CardioEntry> => {
+    const response = await fetch(`${API_BASE_URL}/api/cardio`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to add cardio entry');
+    }
+    return response.json();
+  },
+
+  updateCardioEntry: async (id: string, entry: Partial<CardioEntry>): Promise<CardioEntry> => {
+    const response = await fetch(`${API_BASE_URL}/api/cardio/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update cardio entry');
+    }
+    return response.json();
+  },
+
+  deleteCardioEntry: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/cardio/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete cardio entry');
     }
   },
 
