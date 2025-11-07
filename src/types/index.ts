@@ -32,6 +32,13 @@ export interface CardioEntry {
   notes?: string;
 }
 
+export interface EventEntry {
+  id: string;
+  title: string;
+  description?: string;
+  timestamp: Date;
+}
+
 export interface WeightEntry {
   id: string;
   weight: number;
@@ -73,6 +80,7 @@ export interface ChartDataPoint {
     weight?: number;
     cardioMinutes?: number;
     cardioActivities?: string[];
+    events?: string[];
   };
 }
 

@@ -94,6 +94,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS cardio (
   notes TEXT
 )`);
 
+db.exec(`CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  timestamp TEXT NOT NULL
+)`);
+
 db.exec(`CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -125,6 +132,11 @@ const getCardio = db.prepare('SELECT * FROM cardio ORDER BY timestamp DESC');
 const insertCardio = db.prepare('INSERT INTO cardio (id, activity, minutes, timestamp, notes) VALUES (?, ?, ?, ?, ?)');
 const updateCardio = db.prepare('UPDATE cardio SET activity = ?, minutes = ?, timestamp = ?, notes = ? WHERE id = ?');
 const deleteCardio = db.prepare('DELETE FROM cardio WHERE id = ?');
+
+const getEvents = db.prepare('SELECT * FROM events ORDER BY timestamp DESC');
+const insertEvent = db.prepare('INSERT INTO events (id, title, description, timestamp) VALUES (?, ?, ?, ?)');
+const updateEvent = db.prepare('UPDATE events SET title = ?, description = ?, timestamp = ? WHERE id = ?');
+const deleteEvent = db.prepare('DELETE FROM events WHERE id = ?');
 
 const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
 const setSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)');
@@ -308,6 +320,50 @@ app.delete('/api/cardio/:id', (req, res) => {
   }
 });
 
+// Singular event endpoints
+app.get('/api/events', (req, res) => {
+  try {
+    const rows = getEvents.all();
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/events', (req, res) => {
+  try {
+    const { title, description, timestamp } = req.body;
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 11);
+
+    insertEvent.run(id, title, description, timestamp);
+    res.json({ id, title, description, timestamp });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/events/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, timestamp } = req.body;
+
+    updateEvent.run(title, description, timestamp, id);
+    res.json({ id, title, description, timestamp });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/events/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    deleteEvent.run(id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Weight endpoints
 app.get('/api/weights', (req, res) => {
   try {
@@ -406,6 +462,11 @@ app.get('/api/analysis/advanced', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const eventEntries = getEvents.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     console.log(`Found ${cigarEntries.length} cigar entries, ${drinkEntries.length} drink entries, ${weightEntries.length} weight entries, ${cardioEntries.length} cardio entries`);
 
     const analysis = await aiAnalysisService.generateAdvancedAnalysis(
@@ -413,7 +474,8 @@ app.get('/api/analysis/advanced', async (req, res) => {
       cigarEntries, 
       drinkEntries,
       weightEntries,
-      cardioEntries
+      cardioEntries,
+      eventEntries
     );
 
     console.log('Analysis generated successfully');
@@ -470,12 +532,18 @@ app.get('/api/analysis/enhanced', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const eventEntries = getEvents.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
       readings, 
       cigarEntries, 
       drinkEntries,
       weightEntries,
-      cardioEntries
+      cardioEntries,
+      eventEntries
     );
 
     console.log('Enhanced analysis generated successfully');
@@ -535,12 +603,18 @@ app.post('/api/analysis/enhanced', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const eventEntries = getEvents.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const enhancedAnalysis = await aiAnalysisService.generateEnhancedAnalysis(
       readings, 
       cigarEntries, 
       drinkEntries,
       weightEntries,
-      cardioEntries
+      cardioEntries,
+      eventEntries
     );
 
     console.log('Enhanced analysis generated successfully');
@@ -604,13 +678,19 @@ app.post('/api/analysis/ask', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const eventEntries = getEvents.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const answer = await aiAnalysisService.answerUserQuestion(
       question,
       readings, 
       cigarEntries, 
       drinkEntries,
       weightEntries,
-      cardioEntries
+      cardioEntries,
+      eventEntries
     );
 
     console.log('AI Q&A response generated successfully');
@@ -654,12 +734,18 @@ app.get('/api/analysis/report', async (req, res) => {
       timestamp: new Date(row.timestamp)
     }));
 
+    const eventEntries = getEvents.all().map(row => ({
+      ...row,
+      timestamp: new Date(row.timestamp)
+    }));
+
     const report = await aiAnalysisService.generateHealthReport(
       readings, 
       cigarEntries, 
       drinkEntries,
       weightEntries,
-      cardioEntries
+      cardioEntries,
+      eventEntries
     );
 
     console.log('Health report generated successfully');
@@ -702,7 +788,7 @@ app.get('/api/analysis/debug', async (req, res) => {
       }
     ];
 
-    const analysis = await aiAnalysisService.generateAdvancedAnalysis(testReadings, [], [], [], []);
+    const analysis = await aiAnalysisService.generateAdvancedAnalysis(testReadings, [], [], [], [], []);
     res.json({ 
       status: 'success', 
       message: 'AI service working',

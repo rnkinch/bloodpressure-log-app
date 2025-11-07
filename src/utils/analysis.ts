@@ -323,7 +323,8 @@ export const prepareChartData = (
   cigarEntries: any[] = [], 
   drinkEntries: any[] = [],
   weightEntries: any[] = [],
-  cardioEntries: any[] = []
+  cardioEntries: any[] = [],
+  eventEntries: any[] = []
 ): ChartDataPoint[] => {
   return readings
     .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
@@ -345,6 +346,9 @@ export const prepareChartData = (
       const sameDayCardio = cardioEntries.filter(entry => 
         new Date(entry.timestamp).toDateString() === readingDate.toDateString()
       );
+      const sameDayEvents = eventEntries.filter(entry => 
+        new Date(entry.timestamp).toDateString() === readingDate.toDateString()
+      );
       
       const totalCigars = sameDayCigars.reduce((sum, entry) => sum + entry.count, 0);
       const totalDrinks = sameDayDrinks.reduce((sum, entry) => sum + entry.count, 0);
@@ -356,6 +360,9 @@ export const prepareChartData = (
       const cardioActivities = sameDayCardio
         .map(entry => entry.activity)
         .filter((activity: string | undefined) => !!activity);
+      const eventTitles = sameDayEvents
+        .map(entry => entry.title)
+        .filter((title: string | undefined) => !!title);
 
       const lifestyleData: ChartDataPoint['lifestyle'] = {};
 
@@ -365,6 +372,7 @@ export const prepareChartData = (
       if (latestWeight !== undefined) lifestyleData.weight = latestWeight;
       if (totalCardioMinutes > 0) lifestyleData.cardioMinutes = totalCardioMinutes;
       if (cardioActivities.length > 0) lifestyleData.cardioActivities = cardioActivities;
+      if (eventTitles.length > 0) lifestyleData.events = eventTitles;
 
       return {
         date: format(localDate, 'MMM dd'),

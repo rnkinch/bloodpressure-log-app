@@ -38,14 +38,14 @@
 /* Event styling */
 .rbc-event {
   border-radius: 4px;
-  font-size: 0.75rem;
-  padding: 2px 5px;
+  font-size: 0.7rem;
+  padding: 1px 4px;
   margin-top: 1px;
   margin-bottom: 1px;
 }
 
 .rbc-event-content {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

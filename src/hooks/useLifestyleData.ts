@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CardioEntry, CigarEntry, DrinkEntry } from '../types';
+import { CardioEntry, CigarEntry, DrinkEntry, EventEntry } from '../types';
 import { api } from '../utils/api';
 
 export const useLifestyleData = () => {
   const [cigarEntries, setCigarEntries] = useState<CigarEntry[]>([]);
   const [drinkEntries, setDrinkEntries] = useState<DrinkEntry[]>([]);
   const [cardioEntries, setCardioEntries] = useState<CardioEntry[]>([]);
+  const [eventEntries, setEventEntries] = useState<EventEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Load lifestyle data from API on mount
@@ -13,10 +14,11 @@ export const useLifestyleData = () => {
     const loadLifestyleData = async () => {
       try {
         console.log('Loading lifestyle data from API...');
-        const [cigars, drinks, cardio] = await Promise.all([
+        const [cigars, drinks, cardio, events] = await Promise.all([
           api.getCigarEntries(),
           api.getDrinkEntries(),
-          api.getCardioEntries()
+          api.getCardioEntries(),
+          api.getEventEntries()
         ]);
         
         console.log('Loaded cigars:', cigars);
@@ -35,10 +37,15 @@ export const useLifestyleData = () => {
           ...entry,
           timestamp: new Date(entry.timestamp)
         }));
+        const eventsWithDates = events.map(entry => ({
+          ...entry,
+          timestamp: new Date(entry.timestamp)
+        }));
         
         setCigarEntries(cigarsWithDates);
         setDrinkEntries(drinksWithDates);
         setCardioEntries(cardioWithDates);
+        setEventEntries(eventsWithDates);
       } catch (error) {
         console.error('Failed to load lifestyle data from API:', error);
       } finally {
@@ -186,10 +193,55 @@ export const useLifestyleData = () => {
     }
   }, []);
 
+  // Event entry management
+  const addEventEntry = useCallback(async (entry: Omit<EventEntry, 'id'>) => {
+    try {
+      const newEntry = await api.addEventEntry(entry);
+      const entryWithDate = {
+        ...newEntry,
+        timestamp: new Date(newEntry.timestamp)
+      };
+      setEventEntries(prev => [entryWithDate, ...prev]);
+      return entryWithDate;
+    } catch (error) {
+      console.error('Failed to add event entry:', error);
+      throw error;
+    }
+  }, []);
+
+  const updateEventEntry = useCallback(async (id: string, updates: Partial<EventEntry>) => {
+    try {
+      const updatedEntry = await api.updateEventEntry(id, updates);
+      const entryWithDate = {
+        ...updatedEntry,
+        timestamp: new Date(updatedEntry.timestamp)
+      };
+      setEventEntries(prev =>
+        prev.map(entry =>
+          entry.id === id ? entryWithDate : entry
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update event entry:', error);
+      throw error;
+    }
+  }, []);
+
+  const deleteEventEntry = useCallback(async (id: string) => {
+    try {
+      await api.deleteEventEntry(id);
+      setEventEntries(prev => prev.filter(entry => entry.id !== id));
+    } catch (error) {
+      console.error('Failed to delete event entry:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     cigarEntries,
     drinkEntries,
     cardioEntries,
+    eventEntries,
     loading,
     addCigarEntry,
     updateCigarEntry,
@@ -199,6 +251,9 @@ export const useLifestyleData = () => {
     deleteDrinkEntry,
     addCardioEntry,
     updateCardioEntry,
-    deleteCardioEntry
+    deleteCardioEntry,
+    addEventEntry,
+    updateEventEntry,
+    deleteEventEntry
   };
 };

@@ -3,8 +3,8 @@ import { Calendar, Views } from 'react-big-calendar';
 import { format, parseISO, startOfDay } from 'date-fns';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './LifestyleCalendar.css';
-import { CardioEntry, CigarEntry, DrinkEntry, WeightEntry } from '../types';
-import { Cigarette, Wine, Scale, Activity } from 'lucide-react';
+import { CardioEntry, CigarEntry, DrinkEntry, EventEntry, WeightEntry } from '../types';
+import { Cigarette, Wine, Scale, Activity, Edit, StickyNote } from 'lucide-react';
 
 // Setup the localizer for react-big-calendar using date-fns
 import { dateFnsLocalizer } from 'react-big-calendar';
@@ -29,8 +29,8 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  type: 'cigar' | 'drink' | 'weight' | 'cardio';
-  data: CigarEntry | DrinkEntry | WeightEntry | CardioEntry;
+  type: 'cigar' | 'drink' | 'weight' | 'cardio' | 'event';
+  data: CigarEntry | DrinkEntry | WeightEntry | CardioEntry | EventEntry;
 }
 
 // Define props for the LifestyleCalendar component
@@ -39,6 +39,11 @@ interface LifestyleCalendarProps {
   drinkEntries: DrinkEntry[];
   weightEntries: WeightEntry[];
   cardioEntries: CardioEntry[];
+  eventEntries: EventEntry[];
+  onEditCigar?: (entry: CigarEntry) => void;
+  onEditDrink?: (entry: DrinkEntry) => void;
+  onEditCardio?: (entry: CardioEntry) => void;
+  onEditEvent?: (entry: EventEntry) => void;
 }
 
 // Define the detail view component for a selected day
@@ -46,9 +51,13 @@ interface DayDetailProps {
   date: Date;
   events: CalendarEvent[];
   onClose: () => void;
+  onEditCigar?: (entry: CigarEntry) => void;
+  onEditDrink?: (entry: DrinkEntry) => void;
+  onEditCardio?: (entry: CardioEntry) => void;
+  onEditEvent?: (entry: EventEntry) => void;
 }
 
-const DayDetail: React.FC<DayDetailProps> = ({ date, events, onClose }) => {
+const DayDetail: React.FC<DayDetailProps> = ({ date, events, onClose, onEditCigar, onEditDrink, onEditCardio, onEditEvent }) => {
   const formattedDate = format(date, 'MMMM d, yyyy');
   
   return (
@@ -81,14 +90,30 @@ const DayDetail: React.FC<DayDetailProps> = ({ date, events, onClose }) => {
                       const cigar = event.data as CigarEntry;
                       return (
                         <li key={event.id} className="bg-orange-50 p-3 rounded-md">
-                          <div className="flex justify-between">
-                            <span className="font-medium">Count: {cigar.count}</span>
-                            <span className="text-sm text-gray-500">
-                              {format(cigar.timestamp, 'h:mm a')}
-                            </span>
+                          <div className="flex justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="font-medium">Count: {cigar.count}</span>
+                                <span className="text-sm text-gray-500">
+                                  {format(cigar.timestamp, 'h:mm a')}
+                                </span>
+                              </div>
+                              {cigar.brand && <p className="text-sm">Brand: {cigar.brand}</p>}
+                              {cigar.notes && <p className="text-sm mt-1 text-gray-600">{cigar.notes}</p>}
+                            </div>
+                            {onEditCigar && (
+                              <button
+                                onClick={() => {
+                                  onEditCigar(cigar);
+                                  onClose();
+                                }}
+                                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-orange-600 hover:bg-orange-100 transition-colors"
+                                title="Edit cigar entry"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
-                          {cigar.brand && <p className="text-sm">Brand: {cigar.brand}</p>}
-                          {cigar.notes && <p className="text-sm mt-1 text-gray-600">{cigar.notes}</p>}
                         </li>
                       );
                     })}
@@ -109,17 +134,33 @@ const DayDetail: React.FC<DayDetailProps> = ({ date, events, onClose }) => {
                       const drink = event.data as DrinkEntry;
                       return (
                         <li key={event.id} className="bg-blue-50 p-3 rounded-md">
-                          <div className="flex justify-between">
-                            <span className="font-medium">Count: {drink.count}</span>
-                            <span className="text-sm text-gray-500">
-                              {format(drink.timestamp, 'h:mm a')}
-                            </span>
+                          <div className="flex justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="font-medium">Count: {drink.count}</span>
+                                <span className="text-sm text-gray-500">
+                                  {format(drink.timestamp, 'h:mm a')}
+                                </span>
+                              </div>
+                              {drink.type && <p className="text-sm">Type: {drink.type}</p>}
+                              {drink.alcoholContent && (
+                                <p className="text-sm">Alcohol Content: {drink.alcoholContent}%</p>
+                              )}
+                              {drink.notes && <p className="text-sm mt-1 text-gray-600">{drink.notes}</p>}
+                            </div>
+                            {onEditDrink && (
+                              <button
+                                onClick={() => {
+                                  onEditDrink(drink);
+                                  onClose();
+                                }}
+                                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-blue-600 hover:bg-blue-100 transition-colors"
+                                title="Edit drink entry"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
-                          {drink.type && <p className="text-sm">Type: {drink.type}</p>}
-                          {drink.alcoholContent && (
-                            <p className="text-sm">Alcohol Content: {drink.alcoholContent}%</p>
-                          )}
-                          {drink.notes && <p className="text-sm mt-1 text-gray-600">{drink.notes}</p>}
                         </li>
                       );
                     })}
@@ -167,14 +208,75 @@ const DayDetail: React.FC<DayDetailProps> = ({ date, events, onClose }) => {
                       const cardio = event.data as CardioEntry;
                       return (
                         <li key={event.id} className="bg-purple-50 p-3 rounded-md">
-                          <div className="flex justify-between">
-                            <span className="font-medium">{cardio.activity}</span>
-                            <span className="text-sm text-gray-500">
-                              {format(cardio.timestamp, 'h:mm a')}
-                            </span>
+                          <div className="flex justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="font-medium">{cardio.activity}</span>
+                                <span className="text-sm text-gray-500">
+                                  {format(cardio.timestamp, 'h:mm a')}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600">Duration: {cardio.minutes} min</p>
+                              {cardio.notes && <p className="text-sm mt-1 text-gray-600">{cardio.notes}</p>}
+                            </div>
+                            {onEditCardio && (
+                              <button
+                                onClick={() => {
+                                  onEditCardio(cardio);
+                                  onClose();
+                                }}
+                                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-purple-600 hover:bg-purple-100 transition-colors"
+                                title="Edit cardio entry"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
-                          <p className="text-sm text-gray-600">Duration: {cardio.minutes} min</p>
-                          {cardio.notes && <p className="text-sm mt-1 text-gray-600">{cardio.notes}</p>}
+                        </li>
+                      );
+                    })}
+                </ul>
+              </div>
+            )}
+
+            {events.filter(e => e.type === 'event').length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold flex items-center">
+                  <StickyNote className="h-5 w-5 mr-2 text-amber-600" />
+                  Events
+                </h3>
+                <ul className="mt-2 space-y-2">
+                  {events
+                    .filter(e => e.type === 'event')
+                    .map(event => {
+                      const eventEntry = event.data as EventEntry;
+                      return (
+                        <li key={event.id} className="bg-amber-50 p-3 rounded-md">
+                          <div className="flex justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="font-medium">{eventEntry.title}</span>
+                                <span className="text-sm text-gray-500">
+                                  {format(eventEntry.timestamp, 'h:mm a')}
+                                </span>
+                              </div>
+                              {eventEntry.description && (
+                                <p className="text-sm text-gray-600">{eventEntry.description}</p>
+                              )}
+                            </div>
+                            {onEditEvent && (
+                              <button
+                                onClick={() => {
+                                  onEditEvent(eventEntry);
+                                  onClose();
+                                }}
+                                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-amber-600 hover:bg-amber-100 transition-colors"
+                                title="Edit event"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                         </li>
                       );
                     })}
@@ -202,6 +304,11 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
   drinkEntries,
   weightEntries,
   cardioEntries,
+  eventEntries,
+  onEditCigar,
+  onEditDrink,
+  onEditCardio,
+  onEditEvent,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
@@ -210,6 +317,7 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
     drink: true,
     weight: true,
     cardio: true,
+    event: true,
   });
 
   // Transform the lifestyle data into calendar events
@@ -270,9 +378,22 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
         });
       });
     }
-    
+
+    if (filters.event) {
+      eventEntries.forEach(entry => {
+        allEvents.push({
+          id: `event-${entry.id}`,
+          title: entry.title,
+          start: entry.timestamp,
+          end: entry.timestamp,
+          type: 'event',
+          data: entry,
+        });
+      });
+    }
+
     return allEvents;
-  }, [cigarEntries, drinkEntries, weightEntries, cardioEntries, filters]);
+  }, [cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries, filters]);
 
   // Handle day selection
   const handleSelectSlot = ({ start }: { start: Date }) => {
@@ -303,6 +424,9 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
       case 'cardio':
         backgroundColor = '#7c3aed'; // purple-600
         break;
+      case 'event':
+        backgroundColor = '#f59e0b'; // amber-500
+        break;
     }
     
     return {
@@ -319,7 +443,7 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
   };
 
   // Toggle filter
-  const toggleFilter = (type: 'cigar' | 'drink' | 'weight' | 'cardio') => {
+  const toggleFilter = (type: 'cigar' | 'drink' | 'weight' | 'cardio' | 'event') => {
     setFilters(prev => ({
       ...prev,
       [type]: !prev[type],
@@ -375,6 +499,17 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
             <Activity className={`h-4 w-4 mr-1 ${filters.cardio ? 'text-purple-600' : 'text-gray-400'}`} />
             Cardio
           </button>
+          <button
+            onClick={() => toggleFilter('event')}
+            className={`flex items-center px-3 py-1 rounded-full text-sm ${
+              filters.event
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            <StickyNote className={`h-4 w-4 mr-1 ${filters.event ? 'text-amber-600' : 'text-gray-400'}`} />
+            Events
+          </button>
         </div>
       </div>
       
@@ -384,7 +519,7 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
           events={events}
           startAccessor="start"
           endAccessor="end"
-          style={{ height: 600 }}
+          style={{ height: 720 }}
           views={['month']}
           defaultView={Views.MONTH}
           eventPropGetter={eventStyleGetter}
@@ -399,6 +534,10 @@ export const LifestyleCalendar: React.FC<LifestyleCalendarProps> = ({
           date={selectedDate}
           events={selectedEvents}
           onClose={() => setSelectedDate(null)}
+          onEditCigar={onEditCigar}
+          onEditDrink={onEditDrink}
+          onEditCardio={onEditCardio}
+          onEditEvent={onEditEvent}
         />
       )}
     </div>

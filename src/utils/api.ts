@@ -1,4 +1,4 @@
-import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry, CardioEntry } from '../types';
+import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry, CardioEntry, EventEntry } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -187,6 +187,52 @@ export const api = {
     });
     if (!response.ok) {
       throw new Error('Failed to delete cardio entry');
+    }
+  },
+
+  // Event entries
+  getEventEntries: async (): Promise<EventEntry[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/events`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch event entries');
+    }
+    return response.json();
+  },
+
+  addEventEntry: async (entry: Omit<EventEntry, 'id'>): Promise<EventEntry> => {
+    const response = await fetch(`${API_BASE_URL}/api/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to add event entry');
+    }
+    return response.json();
+  },
+
+  updateEventEntry: async (id: string, entry: Partial<EventEntry>): Promise<EventEntry> => {
+    const response = await fetch(`${API_BASE_URL}/api/events/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update event entry');
+    }
+    return response.json();
+  },
+
+  deleteEventEntry: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/events/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete event entry');
     }
   },
 

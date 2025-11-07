@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
 import { useWeightData } from './hooks/useWeightData';
-import { CardioEntry, DrinkEntry, WeightEntry } from './types';
+import { CardioEntry, DrinkEntry, EventEntry, WeightEntry } from './types';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
 import { AIAnalysis } from './components/AIAnalysis';
@@ -12,16 +12,17 @@ import { ReadingsList } from './components/ReadingsList';
 import { CigarForm } from './components/CigarForm';
 import { DrinkForm } from './components/DrinkForm';
 import CardioForm from './components/CardioForm';
+import EventForm from './components/EventForm';
 import { WeightForm } from './components/WeightForm';
 import { LifestyleEntriesList } from './components/LifestyleEntriesList';
 import LifestyleCalendar from './components/LifestyleCalendar';
 import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown } from 'lucide-react';
+import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown, StickyNote } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'cardio' | 'weight' | 'lifestyle' | 'print' | 'calendar';
+type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'cardio' | 'event' | 'weight' | 'lifestyle' | 'print' | 'calendar';
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
@@ -29,6 +30,7 @@ function App() {
     cigarEntries, 
     drinkEntries, 
     cardioEntries,
+    eventEntries,
     loading: lifestyleLoading,
     addCigarEntry,
     updateCigarEntry,
@@ -38,7 +40,10 @@ function App() {
     deleteDrinkEntry,
     addCardioEntry,
     updateCardioEntry,
-    deleteCardioEntry
+    deleteCardioEntry,
+    addEventEntry,
+    updateEventEntry,
+    deleteEventEntry
   } = useLifestyleData();
   
   const {
@@ -71,6 +76,7 @@ function App() {
   const [editingCigar, setEditingCigar] = useState<any>(null);
   const [editingDrink, setEditingDrink] = useState<DrinkEntry | null>(null);
   const [editingCardio, setEditingCardio] = useState<CardioEntry | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventEntry | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightEntry | null>(null);
   
   const filteredChartData = useMemo(() => {
@@ -85,8 +91,8 @@ function App() {
       filtered = readings.filter(r => r.timestamp >= monthAgo);
     }
     
-    return prepareChartData(filtered, cigarEntries, drinkEntries, weightEntries, cardioEntries);
-  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries, cardioEntries]);
+    return prepareChartData(filtered, cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries);
+  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries]);
 
   const stats = useMemo(() => calculateStats(readings, chartPeriod), [readings, chartPeriod]);
   const analysis = useMemo(() => analyzeTrends(readings, cigarEntries, drinkEntries), [readings, cigarEntries, drinkEntries]);
@@ -195,6 +201,46 @@ function App() {
 
   const handleCancelDrinkEdit = () => {
     setEditingDrink(null);
+    setCurrentView('lifestyle');
+  };
+
+  // Event handlers
+  const handleAddEvent = async (event: Omit<EventEntry, 'id'>) => {
+    try {
+      await addEventEntry(event);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to add event entry:', error);
+    }
+  };
+
+  const handleEditEvent = (event: EventEntry) => {
+    setEditingEvent(event);
+    setCurrentView('event');
+  };
+
+  const handleUpdateEvent = async (event: Omit<EventEntry, 'id'>) => {
+    if (!editingEvent) return;
+
+    try {
+      await updateEventEntry(editingEvent.id, event);
+      setEditingEvent(null);
+      setCurrentView('lifestyle');
+    } catch (error) {
+      console.error('Failed to update event entry:', error);
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      await deleteEventEntry(id);
+    } catch (error) {
+      console.error('Failed to delete event entry:', error);
+    }
+  };
+
+  const handleCancelEventEdit = () => {
+    setEditingEvent(null);
     setCurrentView('lifestyle');
   };
 
@@ -319,7 +365,7 @@ function App() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${['form', 'cigar', 'drink', 'cardio', 'weight'].includes(currentView) ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${['form', 'cigar', 'drink', 'cardio', 'event', 'weight'].includes(currentView) ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Entry
@@ -370,6 +416,16 @@ function App() {
                   </button>
                   <button
                     onClick={() => {
+                      setCurrentView('event');
+                      setDropdownOpen(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <StickyNote className="h-4 w-4 mr-2 text-amber-500" />
+                    Event
+                  </button>
+                  <button
+                    onClick={() => {
                       setCurrentView('weight');
                       setDropdownOpen(false);
                     }}
@@ -388,6 +444,7 @@ function App() {
               { id: 'chart', label: 'Charts', icon: BarChart3 },
               { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
               { id: 'stats', label: 'Statistics', icon: Activity },
+              { id: 'lifestyle', label: 'Lifestyle', icon: Heart },
               { id: 'calendar', label: 'Calendar', icon: CalendarDays },
               { id: 'print', label: 'Print Report', icon: Printer }
             ].map(({ id, label, icon: Icon }) => (
@@ -514,6 +571,28 @@ function App() {
           </div>
         )}
 
+        {currentView === 'event' && (
+          <div className="max-w-2xl mx-auto">
+            {editingEvent ? (
+              <EventForm
+                key={editingEvent.id}
+                onSubmit={handleUpdateEvent}
+                onCancel={handleCancelEventEdit}
+                initialData={editingEvent}
+                isEditing={true}
+              />
+            ) : (
+              <EventForm
+                key="new"
+                onSubmit={handleAddEvent}
+                onCancel={undefined}
+                initialData={undefined}
+                isEditing={false}
+              />
+            )}
+          </div>
+        )}
+
         {currentView === 'weight' && (
           <div className="max-w-2xl mx-auto">
             {editingWeight ? (
@@ -561,6 +640,13 @@ function App() {
                 Add Cardio Entry
               </button>
               <button
+                onClick={() => setCurrentView('event')}
+                className="flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                <StickyNote className="h-4 w-4 mr-2" />
+                Add Event
+              </button>
+              <button
                 onClick={() => setCurrentView('weight')}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
@@ -572,12 +658,15 @@ function App() {
               cigarEntries={cigarEntries}
               drinkEntries={drinkEntries}
               cardioEntries={cardioEntries}
+              eventEntries={eventEntries}
               onEditCigar={handleEditCigar}
               onDeleteCigar={handleDeleteCigar}
               onEditDrink={handleEditDrink}
               onDeleteDrink={handleDeleteDrink}
               onEditCardio={handleEditCardio}
               onDeleteCardio={handleDeleteCardio}
+              onEditEvent={handleEditEvent}
+              onDeleteEvent={handleDeleteEvent}
             />
             <WeightEntriesList
               weightEntries={weightEntries}
@@ -602,6 +691,11 @@ function App() {
               drinkEntries={drinkEntries}
               weightEntries={weightEntries}
               cardioEntries={cardioEntries}
+              eventEntries={eventEntries}
+              onEditCigar={handleEditCigar}
+              onEditDrink={handleEditDrink}
+              onEditCardio={handleEditCardio}
+              onEditEvent={handleEditEvent}
             />
           </div>
         )}

@@ -166,6 +166,11 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
                               {data.lifestyle.cardioActivities.join(', ')}
                             </p>
                           )}
+                          {data.lifestyle.events && data.lifestyle.events.length > 0 && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              🗒️ {data.lifestyle.events.join(', ')}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

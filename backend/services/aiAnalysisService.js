@@ -84,7 +84,7 @@ class AIAnalysisService {
     };
   }
 
-  async generateAdvancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
+  async generateAdvancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
     if (!readings || readings.length === 0) {
       return this.getInsufficientDataResponse();
     }
@@ -94,7 +94,7 @@ class AIAnalysisService {
       dataQuality: this.assessDataQuality(readings),
       riskAssessment: this.performAdvancedRiskAssessment(readings),
       trendAnalysis: this.performAdvancedTrendAnalysis(readings),
-      lifestyleCorrelation: this.analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries),
+      lifestyleCorrelation: this.analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events),
       circadianAnalysis: this.analyzeCircadianPatterns(readings),
       predictiveInsights: this.generatePredictiveInsights(readings),
       personalizedRecommendations: [],
@@ -198,12 +198,13 @@ class AIAnalysisService {
     };
   }
 
-  analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries) {
+  analyzeLifestyleCorrelations(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events) {
     const correlations = {
       smoking: this.analyzeSmokingCorrelation(readings, cigarEntries),
       alcohol: this.analyzeAlcoholCorrelation(readings, drinkEntries),
       weight: this.analyzeWeightCorrelation(readings, weightEntries),
       cardio: this.analyzeCardioCorrelation(readings, cardioEntries),
+      events: this.analyzeEventImpact(events),
       combined: { impact: 'none', confidence: 'low' }
     };
 
@@ -939,6 +940,8 @@ class AIAnalysisService {
     if (correlations.cardio?.impact === 'potentially_negative') score += 2;
     else if (correlations.cardio?.impact === 'beneficial') score = Math.max(score - 1, 0);
 
+    if (correlations.events?.impact === 'recent_change') score += 1;
+
     return Math.min(score, 8);
   }
 
@@ -959,7 +962,43 @@ class AIAnalysisService {
       recommendations.push('Review cardio intensity and recovery since readings rise on workout days.');
     }
 
+    if (correlations.events?.recentEvents?.length) {
+      recommendations.push('Monitor blood pressure closely following recent medication or care plan changes.');
+    }
+
     return recommendations;
+  }
+
+  analyzeEventImpact(events) {
+    if (!events || events.length === 0) {
+      return {
+        impact: 'none',
+        confidence: 'low',
+        recentEvents: []
+      };
+    }
+
+    const sorted = [...events].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const recentEvents = sorted.slice(0, 5).map(event => ({
+      title: event.title,
+      timestamp: event.timestamp,
+      description: event.description
+    }));
+
+    const latestEvent = recentEvents[0];
+    const now = new Date();
+    const latestTimestamp = latestEvent ? new Date(latestEvent.timestamp) : null;
+    const daysSinceLatest = latestTimestamp ? Math.floor((now.getTime() - latestTimestamp.getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+    const impact = latestTimestamp && daysSinceLatest !== null && daysSinceLatest <= 14 ? 'recent_change' : 'historical';
+    const confidence = recentEvents.length > 0 ? 'medium' : 'low';
+
+    return {
+      impact,
+      confidence,
+      recentEvents,
+      daysSinceLatest
+    };
   }
 
   assessCircadianRisk(readings, period) {
@@ -1124,9 +1163,9 @@ class AIAnalysisService {
   }
 
   // New Hugging Face enhanced methods
-  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
+  async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
     // Generate the existing statistical analysis
-      const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries);
+    const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
     
     try {
       // Enhance with Hugging Face insights
@@ -1157,14 +1196,15 @@ class AIAnalysisService {
     }
   }
 
-  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
+  async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
     try {
       const userData = {
         readings: readings,
         cigars: cigarEntries,
         drinks: drinkEntries,
         weights: weightEntries,
-        cardio: cardioEntries
+        cardio: cardioEntries,
+        events: events
       };
 
       const answer = await this.huggingFaceService.answerQuestion(question, userData);
@@ -1195,10 +1235,10 @@ class AIAnalysisService {
     }
   }
 
-  async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = []) {
+  async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
     try {
       // Generate enhanced analysis with AI insights
-      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries);
+      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
       
       // Create a prompt for the health report
       const reportPrompt = this.createHealthReportPrompt(analysis);
@@ -1224,7 +1264,7 @@ class AIAnalysisService {
       console.error('Error generating health report:', error);
       
       // If there's an error with the AI, still provide a basic report
-      const basicAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries);
+      const basicAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
       
       return {
         report: 'Unable to generate AI-powered health report at this time. Please ensure your API key is configured correctly and try again.',
@@ -1256,6 +1296,10 @@ class AIAnalysisService {
     const cardioAverageMinutes = cardioData?.averageMinutes ?? 0;
     const cardioSessions = cardioData?.sessions ?? 0;
     const cardioRecommendations = cardioData?.recommendations || [];
+    const eventData = analysis.lifestyleCorrelation?.events || {};
+    const recentEvents = eventData?.recentEvents || [];
+    const latestEventTitle = recentEvents.length > 0 ? recentEvents[0].title : 'none';
+    const latestEventDate = recentEvents.length > 0 ? recentEvents[0].timestamp : 'n/a';
     
     return `You are a cardiologist creating a comprehensive blood pressure health report for a patient. Use the following data to generate a professional medical report:
 
@@ -1293,6 +1337,11 @@ CARDIO ACTIVITY:
 - Average Minutes per Session: ${cardioAverageMinutes}
 - Sessions Logged: ${cardioSessions}
 ${hasCardioData ? `- Cardio Recommendations: ${cardioRecommendations.join(', ')}` : ''}
+
+RECENT EVENTS:
+- Latest Event: ${latestEventTitle} (${latestEventDate})
+- Events Considered: ${recentEvents.length}
+- Recommendations: ${recentEvents.length > 0 ? 'Monitor BP response to recent changes.' : 'Log significant care plan events to see correlations.'}
 
 CIRCADIAN PATTERNS:
 - Morning Average: ${analysis.circadianAnalysis?.morning?.averageSystolic || 0}/${analysis.circadianAnalysis?.morning?.averageDiastolic || 0}

@@ -93,6 +93,7 @@ async function testAIService() {
       sampleCigarEntries, 
       sampleDrinkEntries,
       [],
+      [],
       []
     );
     
