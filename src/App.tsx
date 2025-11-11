@@ -2,11 +2,9 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
 import { useWeightData } from './hooks/useWeightData';
-import { CardioEntry, DrinkEntry, EventEntry, WeightEntry } from './types';
+import { CardioEntry, DrinkEntry, EventEntry, WeightEntry, TimeRangeFilter } from './types';
 import { BloodPressureForm } from './components/BloodPressureForm';
 import { BloodPressureChart } from './components/BloodPressureChart';
-import { AIAnalysis } from './components/AIAnalysis';
-import EnhancedAIFeatures from './components/EnhancedAIFeatures';
 import { BloodPressureStatsComponent } from './components/BloodPressureStats';
 import { ReadingsList } from './components/ReadingsList';
 import { CigarForm } from './components/CigarForm';
@@ -18,11 +16,41 @@ import { LifestyleEntriesList } from './components/LifestyleEntriesList';
 import LifestyleCalendar from './components/LifestyleCalendar';
 import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
-import { calculateStats, analyzeTrends, prepareChartData } from './utils/analysis';
-import { Heart, Plus, BarChart3, Brain, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown, StickyNote } from 'lucide-react';
+import { calculateStats, analyzeTrends, prepareChartData, filterReadingsByTimeRange } from './utils/analysis';
+import { Heart, Plus, BarChart3, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown, StickyNote } from 'lucide-react';
 import './App.css';
 
-type ViewMode = 'form' | 'chart' | 'ai-assistant' | 'stats' | 'readings' | 'cigar' | 'drink' | 'cardio' | 'event' | 'weight' | 'lifestyle' | 'print' | 'calendar';
+type ViewMode = 'form' | 'chart' | 'stats' | 'readings' | 'cigar' | 'drink' | 'cardio' | 'event' | 'weight' | 'lifestyle' | 'print' | 'calendar';
+
+const DEFAULT_TIME_BAND: TimeRangeFilter = {
+  enabled: false,
+  startHour: 14,
+  endHour: 16,
+  label: 'Custom Range',
+};
+
+const normalizeHourComponents = (hour: number) => {
+  let baseHour = Math.floor(hour);
+  let minutes = Math.round((hour - baseHour) * 60);
+
+  if (minutes === 60) {
+    baseHour += 1;
+    minutes = 0;
+  }
+
+  const normalizedHour = ((baseHour % 24) + 24) % 24;
+
+  return { hour: normalizedHour, minutes };
+};
+
+const formatHourToDisplay = (hour: number) => {
+  const { hour: normalizedHour, minutes } = normalizeHourComponents(hour);
+  const date = new Date(0, 0, 0, normalizedHour, minutes);
+  return date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 function App() {
   const { readings, loading, addReading, updateReading, deleteReading } = useBloodPressureData();
@@ -72,6 +100,7 @@ function App() {
     };
   }, []);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
+  const [timeBandFilter, setTimeBandFilter] = useState<TimeRangeFilter>({ ...DEFAULT_TIME_BAND });
   const [editingReading, setEditingReading] = useState<any>(null);
   const [editingCigar, setEditingCigar] = useState<any>(null);
   const [editingDrink, setEditingDrink] = useState<DrinkEntry | null>(null);
@@ -79,6 +108,39 @@ function App() {
   const [editingEvent, setEditingEvent] = useState<EventEntry | null>(null);
   const [editingWeight, setEditingWeight] = useState<WeightEntry | null>(null);
   
+  const timeOptions = useMemo(
+    () =>
+      Array.from({ length: 24 * 6 }, (_, index) => {
+        const minutes = index * 10;
+        const hourValue = minutes / 60;
+        return {
+          minutes,
+          label: formatHourToDisplay(hourValue),
+        };
+      }).filter(option => option.minutes >= 4 * 60 && option.minutes < 22 * 60),
+    []
+  );
+
+  useEffect(() => {
+    if (timeOptions.length === 0) {
+      return;
+    }
+
+    const allowedMinutes = new Set(timeOptions.map(option => option.minutes));
+    const startMinutes = Math.round(timeBandFilter.startHour * 60);
+    const endMinutes = Math.round(timeBandFilter.endHour * 60);
+
+    if (allowedMinutes.has(startMinutes) && allowedMinutes.has(endMinutes)) {
+      return;
+    }
+
+    setTimeBandFilter(prev => ({
+      ...prev,
+      startHour: DEFAULT_TIME_BAND.startHour,
+      endHour: DEFAULT_TIME_BAND.endHour,
+    }));
+  }, [timeOptions, timeBandFilter.startHour, timeBandFilter.endHour]);
+
   const filteredChartData = useMemo(() => {
     const now = new Date();
     let filtered = readings;
@@ -91,8 +153,10 @@ function App() {
       filtered = readings.filter(r => r.timestamp >= monthAgo);
     }
     
-    return prepareChartData(filtered, cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries);
-  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries]);
+    const timeFiltered = filterReadingsByTimeRange(filtered, timeBandFilter);
+
+    return prepareChartData(timeFiltered, cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries);
+  }, [readings, chartPeriod, cigarEntries, drinkEntries, weightEntries, cardioEntries, eventEntries, timeBandFilter]);
 
   const stats = useMemo(() => calculateStats(readings, chartPeriod), [readings, chartPeriod]);
   const analysis = useMemo(() => analyzeTrends(readings, cigarEntries, drinkEntries), [readings, cigarEntries, drinkEntries]);
@@ -442,7 +506,6 @@ function App() {
             {[
               { id: 'readings', label: 'All Readings', icon: List },
               { id: 'chart', label: 'Charts', icon: BarChart3 },
-              { id: 'ai-assistant', label: 'AI Assistant', icon: Brain },
               { id: 'stats', label: 'Statistics', icon: Activity },
               { id: 'lifestyle', label: 'Lifestyle', icon: Heart },
               { id: 'calendar', label: 'Calendar', icon: CalendarDays },
@@ -480,17 +543,102 @@ function App() {
 
         {currentView === 'chart' && (
           <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow-lg p-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Daily Time Band</h3>
+                    <p className="text-sm text-gray-500">
+                      Filter your blood pressure readings to a specific time window each day.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={timeBandFilter.enabled}
+                        onChange={(event) =>
+                          setTimeBandFilter((prev) => ({
+                            ...prev,
+                            enabled: event.target.checked,
+                          }))
+                        }
+                        className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      Enabled
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700" htmlFor="time-band-start">
+                        Start
+                      </label>
+                      <select
+                        id="time-band-start"
+                        value={Math.round(timeBandFilter.startHour * 60)}
+                        onChange={(event) =>
+                          setTimeBandFilter((prev) => ({
+                            ...prev,
+                            startHour: Number(event.target.value) / 60,
+                          }))
+                        }
+                        disabled={!timeBandFilter.enabled}
+                        className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                          timeBandFilter.enabled ? 'bg-white' : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {timeOptions.map(({ minutes, label }) => (
+                          <option key={minutes} value={minutes}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700" htmlFor="time-band-end">
+                        End
+                      </label>
+                      <select
+                        id="time-band-end"
+                        value={Math.round(timeBandFilter.endHour * 60)}
+                        onChange={(event) =>
+                          setTimeBandFilter((prev) => ({
+                            ...prev,
+                            endHour: Number(event.target.value) / 60,
+                          }))
+                        }
+                        disabled={!timeBandFilter.enabled}
+                        className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                          timeBandFilter.enabled ? 'bg-white' : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {timeOptions.map(({ minutes, label }) => (
+                          <option key={minutes} value={minutes}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTimeBandFilter({ ...DEFAULT_TIME_BAND })}
+                      className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                {timeBandFilter.enabled && timeBandFilter.startHour > timeBandFilter.endHour && (
+                  <p className="text-sm text-amber-600">
+                    This range wraps past midnight and will capture readings after {formatHourToDisplay(timeBandFilter.startHour)} and before {formatHourToDisplay(timeBandFilter.endHour)} the next day.
+                  </p>
+                )}
+              </div>
+            </div>
             <BloodPressureChart
               data={filteredChartData}
               period={chartPeriod}
               onPeriodChange={setChartPeriod}
+              timeBand={timeBandFilter}
             />
-          </div>
-        )}
-
-        {currentView === 'ai-assistant' && (
-          <div className="max-w-6xl mx-auto">
-            <EnhancedAIFeatures />
           </div>
         )}
 
@@ -705,7 +853,7 @@ function App() {
       <footer className="bg-white border-t mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center text-sm text-gray-500">
-            <p>Blood Pressure Tracker - Track your health with AI-powered insights</p>
+            <p>Blood Pressure Tracker - Monitor and understand your health trends</p>
             <p className="mt-1">
               This app is for informational purposes only. Always consult with a healthcare provider for medical advice.
             </p>

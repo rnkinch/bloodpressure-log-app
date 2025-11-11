@@ -1,0 +1,6 @@
+node_modules
+npm-debug.log
+bloodpressure.db
+bloodpressure.db.backup*
+data
+

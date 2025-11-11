@@ -12,19 +12,21 @@ import {
   Scatter,
   ComposedChart
 } from 'recharts';
-import { ChartDataPoint } from '../types';
-import { TrendingUp, Activity } from 'lucide-react';
+import { ChartDataPoint, TimeRangeFilter } from '../types';
+import { TrendingUp, Activity, Clock } from 'lucide-react';
 
 interface BloodPressureChartProps {
   data: ChartDataPoint[];
   period: 'week' | 'month' | 'all';
   onPeriodChange: (period: 'week' | 'month' | 'all') => void;
+  timeBand?: TimeRangeFilter;
 }
 
 export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
   data,
   period,
-  onPeriodChange
+  onPeriodChange,
+  timeBand
 }) => {
   const formatTooltipValue = (value: number, name: string) => {
     const unit = name === 'heartRate' ? ' BPM' : ' mmHg';
@@ -37,6 +39,39 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
       case 'month': return 'Last 30 Days';
       default: return 'All Time';
     }
+  };
+
+  const formatHourLabel = (hour: number) => {
+    let baseHour = Math.floor(hour);
+    let minutes = Math.round((hour - baseHour) * 60);
+
+    if (minutes === 60) {
+      baseHour += 1;
+      minutes = 0;
+    }
+
+    const normalizedHour = ((baseHour % 24) + 24) % 24;
+    const date = new Date(0, 0, 0, normalizedHour, minutes);
+
+    return date.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const renderTimeBandNotice = () => {
+    if (!timeBand?.enabled) {
+      return null;
+    }
+
+    return (
+      <div className="mb-4 px-3 py-2 bg-primary-50 border border-primary-100 text-primary-700 text-sm rounded-md flex items-center gap-2">
+        <Clock className="h-4 w-4" />
+        <span>
+          Showing readings recorded between {formatHourLabel(timeBand.startHour)} and {formatHourLabel(timeBand.endHour)} each day.
+        </span>
+      </div>
+    );
   };
 
   if (data.length === 0) {
@@ -65,6 +100,7 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
             ))}
           </div>
         </div>
+        {renderTimeBandNotice()}
         <div className="text-center py-12">
           <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 text-lg">No data available</p>
@@ -102,6 +138,7 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
           ))}
         </div>
       </div>
+      {renderTimeBandNotice()}
 
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">

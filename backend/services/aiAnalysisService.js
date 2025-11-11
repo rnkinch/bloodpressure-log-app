@@ -1,9 +1,6 @@
-const HuggingFaceService = require('./huggingFaceService');
-
 class AIAnalysisService {
   constructor() {
     this.medicalKnowledgeBase = this.initializeMedicalKnowledgeBase();
-    this.huggingFaceService = new HuggingFaceService();
   }
 
   // Utility functions
@@ -1162,123 +1159,64 @@ class AIAnalysisService {
     return recommendations;
   }
 
-  // New Hugging Face enhanced methods
+  // Previously AI-enhanced methods (now deterministic placeholders)
   async generateEnhancedAnalysis(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
     // Generate the existing statistical analysis
     const baseAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
     
-    try {
-      // Enhance with Hugging Face insights
-      const llmInsights = await this.huggingFaceService.generateInsights(baseAnalysis);
-      const llmRecommendations = await this.huggingFaceService.generateRecommendations(
-        baseAnalysis.riskAssessment, 
-        baseAnalysis.lifestyleCorrelation
-      );
-
-      // Combine the analysis
-      return {
-        ...baseAnalysis,
-        llmInsights: llmInsights,
-        llmRecommendations: llmRecommendations,
-        enhanced: true,
-        enhancementTimestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Error enhancing analysis with Hugging Face:', error);
-      // Return base analysis if enhancement fails
-      return {
-        ...baseAnalysis,
-        llmInsights: { insights: 'AI enhancement temporarily unavailable', source: 'error' },
-        llmRecommendations: { recommendations: [], source: 'error' },
-        enhanced: false,
-        enhancementError: error.message
-      };
-    }
+    return {
+      ...baseAnalysis,
+      llmInsights: {
+        insights: 'AI-generated insights are disabled. Review the statistical analysis above for guidance.',
+        source: 'disabled',
+        timestamp: new Date().toISOString()
+      },
+      llmRecommendations: {
+        recommendations: [
+          'AI recommendations are disabled. Follow evidence-based guidance from your healthcare provider.',
+          'Use the statistics and trends in this dashboard to support discussions with medical professionals.'
+        ],
+        source: 'disabled',
+        timestamp: new Date().toISOString()
+      },
+      enhanced: false,
+      enhancementTimestamp: new Date().toISOString()
+    };
   }
 
   async answerUserQuestion(question, readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
-    try {
-      const userData = {
-        readings: readings,
-        cigars: cigarEntries,
-        drinks: drinkEntries,
-        weights: weightEntries,
-        cardio: cardioEntries,
-        events: events
-      };
-
-      const answer = await this.huggingFaceService.answerQuestion(question, userData);
-      
-      return {
-        question: question,
-        answer: answer,
-        timestamp: new Date().toISOString(),
-        context: {
-          totalReadings: readings.length,
-          recentAverage: readings.length > 0 ? {
-            systolic: this.mean(readings.slice(-5).map(r => r.systolic)),
-            diastolic: this.mean(readings.slice(-5).map(r => r.diastolic))
-          } : null
-        }
-      };
-    } catch (error) {
-      console.error('Error answering user question:', error);
-      return {
-        question: question,
-        answer: {
-          answer: 'I apologize, but I encountered an error while processing your question. Please try again or consult with a healthcare provider for medical advice.',
-          source: 'error'
-        },
-        timestamp: new Date().toISOString(),
-        error: error.message
-      };
-    }
+    return {
+      question,
+      answer: {
+        answer: 'Interactive AI has been removed from this application. Please consult your healthcare provider for personalised medical guidance.',
+        source: 'disabled',
+        timestamp: new Date().toISOString()
+      },
+      timestamp: new Date().toISOString(),
+      context: {
+        totalReadings: readings.length,
+        recentAverage: readings.length > 0 ? {
+          systolic: this.mean(readings.slice(-5).map(r => r.systolic)),
+          diastolic: this.mean(readings.slice(-5).map(r => r.diastolic))
+        } : null
+      }
+    };
   }
 
   async generateHealthReport(readings, cigarEntries = [], drinkEntries = [], weightEntries = [], cardioEntries = [], events = []) {
-    try {
-      // Generate enhanced analysis with AI insights
-      const analysis = await this.generateEnhancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
-      
-      // Create a prompt for the health report
-      const reportPrompt = this.createHealthReportPrompt(analysis);
-      
-      // Use the medical model for health reports
-      const report = await this.huggingFaceService.callHuggingFaceAPI(reportPrompt, this.huggingFaceService.medicalModel);
-      
-      // Add a disclaimer to the report
-      const reportWithDisclaimer = `${report}\n\nDISCLAIMER: This report was generated using AI and should be reviewed by a healthcare professional. It is not a substitute for professional medical advice, diagnosis, or treatment.`;
-      
-      return {
-        report: reportWithDisclaimer,
-        analysis: analysis,
-        generatedAt: new Date().toISOString(),
-        source: 'huggingface',
-        period: {
-          start: readings.length > 0 ? new Date(readings[readings.length - 1].timestamp).toISOString() : null,
-          end: readings.length > 0 ? new Date(readings[0].timestamp).toISOString() : null,
-          totalReadings: readings.length
-        }
-      };
-    } catch (error) {
-      console.error('Error generating health report:', error);
-      
-      // If there's an error with the AI, still provide a basic report
-      const basicAnalysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
-      
-      return {
-        report: 'Unable to generate AI-powered health report at this time. Please ensure your API key is configured correctly and try again.',
-        analysis: basicAnalysis,
-        generatedAt: new Date().toISOString(),
-        source: 'fallback',
-        error: error.message,
-        period: {
-          start: readings.length > 0 ? new Date(readings[readings.length - 1].timestamp).toISOString() : null,
-          end: readings.length > 0 ? new Date(readings[0].timestamp).toISOString() : null,
-          totalReadings: readings.length
-        }
-      };
-    }
+    const analysis = await this.generateAdvancedAnalysis(readings, cigarEntries, drinkEntries, weightEntries, cardioEntries, events);
+    
+    return {
+      report: 'Automated AI health reports have been removed. Use the statistical insights within this app to create reports manually with your clinician.',
+      analysis,
+      generatedAt: new Date().toISOString(),
+      source: 'disabled',
+      period: {
+        start: readings.length > 0 ? new Date(readings[readings.length - 1].timestamp).toISOString() : null,
+        end: readings.length > 0 ? new Date(readings[0].timestamp).toISOString() : null,
+        totalReadings: readings.length
+      }
+    };
   }
 
   createHealthReportPrompt(analysis) {

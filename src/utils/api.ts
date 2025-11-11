@@ -1,11 +1,17 @@
 import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry, CardioEntry, EventEntry } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const normalizeBaseUrl = (base?: string) => {
+  if (!base) return '';
+  return base.endsWith('/') ? base.slice(0, -1) : base;
+};
+
+const API_BASE_URL = normalizeBaseUrl(process.env.REACT_APP_API_URL);
+const buildUrl = (path: string) => `${API_BASE_URL}${path}`;
 
 export const api = {
   // Get all readings
   getReadings: async (): Promise<BloodPressureReading[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/readings`);
+    const response = await fetch(buildUrl(`/api/readings`));
     if (!response.ok) {
       throw new Error('Failed to fetch readings');
     }
@@ -14,7 +20,7 @@ export const api = {
 
   // Add a new reading
   addReading: async (reading: Omit<BloodPressureReading, 'id'>): Promise<BloodPressureReading> => {
-    const response = await fetch(`${API_BASE_URL}/api/readings`, {
+    const response = await fetch(buildUrl(`/api/readings`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,7 +35,7 @@ export const api = {
 
   // Update a reading
   updateReading: async (id: string, reading: Partial<BloodPressureReading>): Promise<BloodPressureReading> => {
-    const response = await fetch(`${API_BASE_URL}/api/readings/${id}`, {
+    const response = await fetch(buildUrl(`/api/readings/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -44,7 +50,7 @@ export const api = {
 
   // Delete a reading
   deleteReading: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/readings/${id}`, {
+    const response = await fetch(buildUrl(`/api/readings/${id}`), {
       method: 'DELETE',
     });
     if (!response.ok) {
@@ -54,7 +60,7 @@ export const api = {
 
   // Cigar entries
   getCigarEntries: async (): Promise<CigarEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/cigars`);
+    const response = await fetch(buildUrl(`/api/cigars`));
     if (!response.ok) {
       throw new Error('Failed to fetch cigar entries');
     }
@@ -62,7 +68,7 @@ export const api = {
   },
 
   addCigarEntry: async (entry: Omit<CigarEntry, 'id'>): Promise<CigarEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/cigars`, {
+    const response = await fetch(buildUrl(`/api/cigars`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +82,7 @@ export const api = {
   },
 
   updateCigarEntry: async (id: string, entry: Partial<CigarEntry>): Promise<CigarEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/cigars/${id}`, {
+    const response = await fetch(buildUrl(`/api/cigars/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -90,7 +96,7 @@ export const api = {
   },
 
   deleteCigarEntry: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/cigars/${id}`, {
+    const response = await fetch(buildUrl(`/api/cigars/${id}`), {
       method: 'DELETE',
     });
     if (!response.ok) {
@@ -100,7 +106,7 @@ export const api = {
 
   // Drink entries
   getDrinkEntries: async (): Promise<DrinkEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/drinks`);
+    const response = await fetch(buildUrl(`/api/drinks`));
     if (!response.ok) {
       throw new Error('Failed to fetch drink entries');
     }
@@ -108,7 +114,7 @@ export const api = {
   },
 
   addDrinkEntry: async (entry: Omit<DrinkEntry, 'id'>): Promise<DrinkEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/drinks`, {
+    const response = await fetch(buildUrl(`/api/drinks`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -122,7 +128,7 @@ export const api = {
   },
 
   updateDrinkEntry: async (id: string, entry: Partial<DrinkEntry>): Promise<DrinkEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/drinks/${id}`, {
+    const response = await fetch(buildUrl(`/api/drinks/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -136,7 +142,7 @@ export const api = {
   },
 
   deleteDrinkEntry: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/drinks/${id}`, {
+    const response = await fetch(buildUrl(`/api/drinks/${id}`), {
       method: 'DELETE',
     });
     if (!response.ok) {
@@ -146,7 +152,7 @@ export const api = {
 
   // Cardio entries
   getCardioEntries: async (): Promise<CardioEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/cardio`);
+    const response = await fetch(buildUrl(`/api/cardio`));
     if (!response.ok) {
       throw new Error('Failed to fetch cardio entries');
     }
@@ -154,7 +160,7 @@ export const api = {
   },
 
   addCardioEntry: async (entry: Omit<CardioEntry, 'id'>): Promise<CardioEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/cardio`, {
+    const response = await fetch(buildUrl(`/api/cardio`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,7 +174,7 @@ export const api = {
   },
 
   updateCardioEntry: async (id: string, entry: Partial<CardioEntry>): Promise<CardioEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/cardio/${id}`, {
+    const response = await fetch(buildUrl(`/api/cardio/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -182,7 +188,7 @@ export const api = {
   },
 
   deleteCardioEntry: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/cardio/${id}`, {
+    const response = await fetch(buildUrl(`/api/cardio/${id}`), {
       method: 'DELETE',
     });
     if (!response.ok) {
@@ -192,7 +198,7 @@ export const api = {
 
   // Event entries
   getEventEntries: async (): Promise<EventEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/events`);
+    const response = await fetch(buildUrl(`/api/events`));
     if (!response.ok) {
       throw new Error('Failed to fetch event entries');
     }
@@ -200,7 +206,7 @@ export const api = {
   },
 
   addEventEntry: async (entry: Omit<EventEntry, 'id'>): Promise<EventEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/events`, {
+    const response = await fetch(buildUrl(`/api/events`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -214,7 +220,7 @@ export const api = {
   },
 
   updateEventEntry: async (id: string, entry: Partial<EventEntry>): Promise<EventEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/events/${id}`, {
+    const response = await fetch(buildUrl(`/api/events/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -228,7 +234,7 @@ export const api = {
   },
 
   deleteEventEntry: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/events/${id}`, {
+    const response = await fetch(buildUrl(`/api/events/${id}`), {
       method: 'DELETE',
     });
     if (!response.ok) {
@@ -238,7 +244,7 @@ export const api = {
 
   // Weight entries
   getWeightEntries: async (): Promise<WeightEntry[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/weights`);
+    const response = await fetch(buildUrl(`/api/weights`));
     if (!response.ok) {
       throw new Error('Failed to fetch weight entries');
     }
@@ -246,7 +252,7 @@ export const api = {
   },
 
   addWeightEntry: async (entry: Omit<WeightEntry, 'id'>): Promise<WeightEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/weights`, {
+    const response = await fetch(buildUrl(`/api/weights`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -260,7 +266,7 @@ export const api = {
   },
 
   updateWeightEntry: async (id: string, entry: Partial<WeightEntry>): Promise<WeightEntry> => {
-    const response = await fetch(`${API_BASE_URL}/api/weights/${id}`, {
+    const response = await fetch(buildUrl(`/api/weights/${id}`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -274,51 +280,11 @@ export const api = {
   },
 
   deleteWeightEntry: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/weights/${id}`, {
+    const response = await fetch(buildUrl(`/api/weights/${id}`), {
       method: 'DELETE',
     });
     if (!response.ok) {
       throw new Error('Failed to delete weight entry');
     }
-  },
-
-  // AI Analysis
-  getAdvancedAnalysis: async (): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/api/analysis/advanced`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch advanced AI analysis');
-    }
-    return response.json();
-  },
-
-  checkAIServiceHealth: async (): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/api/analysis/health`);
-    if (!response.ok) {
-      throw new Error('AI service health check failed');
-    }
-    return response.json();
-  },
-
-  // Settings
-  getSetting: async (key: string): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/api/settings/${key}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch setting');
-    }
-    return response.json();
-  },
-
-  setSetting: async (key: string, value: string): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/api/settings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ key, value }),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to save setting');
-    }
-    return response.json();
   },
 };
