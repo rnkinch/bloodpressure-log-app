@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useBloodPressureData } from './hooks/useBloodPressureData';
 import { useLifestyleData } from './hooks/useLifestyleData';
 import { useWeightData } from './hooks/useWeightData';
@@ -17,7 +17,7 @@ import LifestyleCalendar from './components/LifestyleCalendar';
 import { WeightEntriesList } from './components/WeightEntriesList';
 import { PrintReport } from './components/PrintReport';
 import { calculateStats, analyzeTrends, prepareChartData, filterReadingsByTimeRange } from './utils/analysis';
-import { Heart, Plus, BarChart3, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, ChevronDown, StickyNote, Menu, X } from 'lucide-react';
+import { Heart, Plus, BarChart3, Activity, List, Cigarette, Wine, Scale, Printer, CalendarDays, StickyNote, Menu, X } from 'lucide-react';
 import './App.css';
 
 type ViewMode = 'form' | 'chart' | 'stats' | 'readings' | 'cigar' | 'drink' | 'cardio' | 'event' | 'weight' | 'lifestyle' | 'print' | 'calendar';
@@ -83,42 +83,7 @@ function App() {
   } = useWeightData();
   
   const [currentView, setCurrentView] = useState<ViewMode>('form');
-  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
-  
-  // Close dropdown when clicking outside or scrolling
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      if (dropdownRef.current && !dropdownRef.current.contains(target) && 
-          buttonRef.current && !buttonRef.current.contains(target)) {
-        setDropdownOpen(false);
-        setDropdownPosition(null);
-      }
-    }
-    
-    function handleScroll() {
-      setDropdownOpen(false);
-      setDropdownPosition(null);
-    }
-    
-    // Use click event instead of mousedown, and add delay to avoid immediate closure
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-      window.addEventListener('scroll', handleScroll, true);
-    }, 100);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('click', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, true);
-    };
-  }, [dropdownOpen]);
   const [chartPeriod, setChartPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [timeBandFilter, setTimeBandFilter] = useState<TimeRangeFilter>({ ...DEFAULT_TIME_BAND });
   const [editingReading, setEditingReading] = useState<any>(null);
@@ -470,120 +435,40 @@ function App() {
       <nav className={`glass-card border-b border-white/30 relative ${mobileMenuOpen ? '' : 'hidden sm:block'}`} style={{ zIndex: 30, overflow: 'visible' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style={{ overflow: 'visible' }}>
           <div className="flex space-x-2 sm:space-x-8 overflow-x-auto scrollbar-hide pb-2 sm:pb-0" style={{ position: 'relative', zIndex: 30, overflowY: 'visible' }}>
-            {/* Add Reading Dropdown */}
-            <div className="relative" style={{ zIndex: 50 }}>
-              <button
-                ref={buttonRef}
-                type="button"
-                onClick={() => {
-                  if (buttonRef.current) {
-                    const rect = buttonRef.current.getBoundingClientRect();
-                    setDropdownPosition({
-                      top: rect.bottom - 2, // Reduced offset to bring it closer
-                      left: rect.left
-                    });
+            {/* Add Reading Dropdown - Native Select for Mobile Compatibility */}
+            <div className={`relative flex items-center px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-all duration-200 whitespace-nowrap ${
+              ['form', 'cigar', 'drink', 'cardio', 'event', 'weight'].includes(currentView)
+                ? 'border-primary-500 text-primary-600 bg-primary-50/50'
+                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:bg-white/30'
+            }`}>
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <select
+                value={['form', 'cigar', 'drink', 'cardio', 'event', 'weight'].includes(currentView) ? currentView : ''}
+                onChange={(e) => {
+                  const value = e.target.value as ViewMode;
+                  if (value) {
+                    setCurrentView(value);
+                    setMobileMenuOpen(false);
+                    // Reset to empty after selection to allow re-selecting same option
+                    e.target.value = '';
                   }
-                  console.log('Dropdown button clicked, current state:', dropdownOpen);
-                  setDropdownOpen(!dropdownOpen);
                 }}
-                className={`flex items-center px-2 sm:px-3 py-3 sm:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${['form', 'cigar', 'drink', 'cardio', 'event', 'weight'].includes(currentView) ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-                style={{ pointerEvents: 'auto' }}
+                className="appearance-none bg-transparent border-0 outline-none cursor-pointer font-semibold text-inherit pr-6 sm:pr-7 py-1 min-w-[85px] sm:min-w-[125px] focus:ring-0"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.25rem center',
+                  backgroundSize: '14px 14px'
+                }}
               >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Add Entry</span>
-                <span className="sm:hidden">Add</span>
-                <ChevronDown className="h-3 w-3 ml-1" />
-              </button>
-              
-              {dropdownOpen && dropdownPosition && (
-                <div 
-                  ref={dropdownRef}
-                  className="fixed w-48 bg-white rounded-xl shadow-xl py-2 border-2 border-gray-200"
-                  style={{ 
-                    zIndex: 9999, 
-                    position: 'fixed',
-                    top: `${dropdownPosition.top}px`,
-                    left: `${dropdownPosition.left}px`,
-                    display: 'block',
-                    visibility: 'visible',
-                    opacity: 1
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentView('form');
-                      setDropdownOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Heart className="h-4 w-4 mr-2 text-red-500" />
-                    Blood Pressure
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentView('cigar');
-                      setDropdownOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Cigarette className="h-4 w-4 mr-2 text-orange-500" />
-                    Cigar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentView('drink');
-                      setDropdownOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Wine className="h-4 w-4 mr-2 text-blue-500" />
-                    Drink
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentView('cardio');
-                      setDropdownOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Activity className="h-4 w-4 mr-2 text-purple-500" />
-                    Cardio
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentView('event');
-                      setDropdownOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <StickyNote className="h-4 w-4 mr-2 text-amber-500" />
-                    Event
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentView('weight');
-                      setDropdownOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                  >
-                    <Scale className="h-4 w-4 mr-2 text-green-500" />
-                    Weight
-                  </button>
-                </div>
-              )}
+                <option value="" hidden>Add Entry</option>
+                <option value="form">Blood Pressure</option>
+                <option value="cigar">Cigar</option>
+                <option value="drink">Drink</option>
+                <option value="cardio">Cardio</option>
+                <option value="event">Event</option>
+                <option value="weight">Weight</option>
+              </select>
             </div>
             
             {/* Other Navigation Items */}
