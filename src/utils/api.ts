@@ -44,7 +44,9 @@ export const api = {
 
   // Add a new reading
   addReading: async (reading: Omit<BloodPressureReading, 'id'>): Promise<BloodPressureReading> => {
-    const response = await fetch(buildUrl(`/api/readings`), {
+    const url = buildUrl(`/api/readings`);
+    console.log('Adding reading to:', url, reading);
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,9 +54,13 @@ export const api = {
       body: JSON.stringify(reading),
     });
     if (!response.ok) {
-      throw new Error('Failed to add reading');
+      const errorText = await response.text();
+      console.error('Failed to add reading:', response.status, response.statusText, errorText);
+      throw new Error(`Failed to add reading: ${response.status} ${response.statusText} - ${errorText}`);
     }
-    return response.json();
+    const data = await response.json();
+    console.log('Successfully added reading:', data);
+    return data;
   },
 
   // Update a reading
