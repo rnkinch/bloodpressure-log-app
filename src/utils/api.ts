@@ -1,21 +1,45 @@
 import { BloodPressureReading, CigarEntry, DrinkEntry, WeightEntry, CardioEntry, EventEntry } from '../types';
 
 const normalizeBaseUrl = (base?: string) => {
-  if (!base) return '';
-  return base.endsWith('/') ? base.slice(0, -1) : base;
+  if (base) {
+    return base.endsWith('/') ? base.slice(0, -1) : base;
+  }
+  
+  // Auto-detect API URL based on current hostname
+  // If accessed via IP (192.x.x.x), use that IP for API
+  // Otherwise use localhost
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // Check if accessing via IP address (LAN access)
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      return `http://${hostname}:3001`;
+    }
+  }
+  
+  // Default to localhost for local development
+  return 'http://localhost:3001';
 };
 
 const API_BASE_URL = normalizeBaseUrl(process.env.REACT_APP_API_URL);
-const buildUrl = (path: string) => `${API_BASE_URL}${path}`;
+const buildUrl = (path: string) => {
+  // Ensure path starts with /
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+};
 
 export const api = {
   // Get all readings
   getReadings: async (): Promise<BloodPressureReading[]> => {
-    const response = await fetch(buildUrl(`/api/readings`));
+    const url = buildUrl(`/api/readings`);
+    console.log('Fetching readings from:', url);
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch readings');
+      console.error('Failed to fetch readings:', response.status, response.statusText);
+      throw new Error(`Failed to fetch readings: ${response.status} ${response.statusText}`);
     }
-    return response.json();
+    const data = await response.json();
+    console.log('Received readings from API:', data.length, 'entries');
+    return data;
   },
 
   // Add a new reading
@@ -60,9 +84,19 @@ export const api = {
 
   // Cigar entries
   getCigarEntries: async (): Promise<CigarEntry[]> => {
-    const response = await fetch(buildUrl(`/api/cigars`));
+    const url = buildUrl(`/api/cigars`);
+    console.log('Fetching cigars from:', url);
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch cigar entries');
+      const text = await response.text();
+      console.error('Failed to fetch cigars:', response.status, text.substring(0, 200));
+      throw new Error(`Failed to fetch cigar entries: ${response.status}`);
+    }
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Response is not JSON. Content-Type:', contentType, 'Response:', text.substring(0, 200));
+      throw new Error('Response is not JSON. Check if backend is running.');
     }
     return response.json();
   },
@@ -244,9 +278,19 @@ export const api = {
 
   // Weight entries
   getWeightEntries: async (): Promise<WeightEntry[]> => {
-    const response = await fetch(buildUrl(`/api/weights`));
+    const url = buildUrl(`/api/weights`);
+    console.log('Fetching weights from:', url);
+    const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('Failed to fetch weight entries');
+      const text = await response.text();
+      console.error('Failed to fetch weights:', response.status, text.substring(0, 200));
+      throw new Error(`Failed to fetch weight entries: ${response.status}`);
+    }
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Response is not JSON. Content-Type:', contentType, 'Response:', text.substring(0, 200));
+      throw new Error('Response is not JSON. Check if backend is running.');
     }
     return response.json();
   },

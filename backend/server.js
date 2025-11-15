@@ -13,7 +13,11 @@ const PORT = process.env.PORT || 3001;
 const aiAnalysisService = new AIAnalysisService();
 
 // Middleware
-app.use(cors());
+// Allow all origins for development (simplifies LAN access)
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 // Disable caching for API responses
@@ -32,16 +36,14 @@ const resolveDbPath = () => {
     return process.env.BP_DB_PATH;
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    return '/app/data/bloodpressure.db';
-  }
-
+  // Always use the data directory relative to project root for native execution
   const dataDir = path.resolve(__dirname, '../data');
   const dataDbPath = path.join(dataDir, 'bloodpressure.db');
   if (fs.existsSync(dataDbPath)) {
     return dataDbPath;
   }
 
+  // Fallback to backend directory if data directory doesn't exist
   return path.resolve(__dirname, './bloodpressure.db');
 };
 
@@ -550,4 +552,6 @@ app.get('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`API available at http://localhost:${PORT}/api`);
+  console.log(`Server listening on all interfaces (0.0.0.0) - accessible from LAN`);
+  console.log(`CORS enabled for localhost and 192.x.x.x subnet`);
 });
