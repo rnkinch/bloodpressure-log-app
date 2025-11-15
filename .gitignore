@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+# But keep node_modules tracked (just ignore cache)
+node_modules/.cache/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -34,6 +36,10 @@ Thumbs.db
 logs
 *.log
 
-# Database files (optional - you might want to keep these)
-# *.db
-# *.sqlite
+# Database files
+*.db
+*.sqlite
+*.db-journal
+data/*.db
+backend/*.db
+backend/*.db.backup
