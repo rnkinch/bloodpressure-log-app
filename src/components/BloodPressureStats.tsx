@@ -23,12 +23,12 @@ export const BloodPressureStatsComponent: React.FC<BloodPressureStatsProps> = ({
 
   if (stats.totalReadings === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center mb-6">
-          <div className="bg-secondary-100 p-2 rounded-lg mr-3">
-            <Activity className="h-6 w-6 text-secondary-600" />
+      <div className="glass-card-hover p-4 sm:p-6">
+        <div className="flex items-center mb-4 sm:mb-6">
+          <div className="bg-gradient-to-br from-secondary-500 to-secondary-600 p-2 rounded-lg mr-3 flex-shrink-0">
+            <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">Statistics</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Statistics</h3>
         </div>
         <div className="text-center py-8">
           <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -40,14 +40,14 @@ export const BloodPressureStatsComponent: React.FC<BloodPressureStatsProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex items-center mb-6">
-        <div className="bg-secondary-100 p-2 rounded-lg mr-3">
-          <Activity className="h-6 w-6 text-secondary-600" />
+    <div className="glass-card-hover p-4 sm:p-6">
+      <div className="flex items-center mb-4 sm:mb-6">
+        <div className="bg-gradient-to-br from-secondary-500 to-secondary-600 p-2 rounded-lg mr-3 flex-shrink-0">
+          <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Statistics</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Statistics</h3>
+          <p className="text-xs sm:text-sm text-gray-500">
             {stats.period === 'week' ? 'Last 7 days' : 
              stats.period === 'month' ? 'Last 30 days' : 'All time'} 
             ({stats.totalReadings} readings)
@@ -56,7 +56,7 @@ export const BloodPressureStatsComponent: React.FC<BloodPressureStatsProps> = ({
       </div>
 
       {/* Average Values */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div className="bg-red-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Average Systolic</span>
@@ -86,7 +86,7 @@ export const BloodPressureStatsComponent: React.FC<BloodPressureStatsProps> = ({
       </div>
 
       {/* Range Values */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div className="bg-gray-50 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">Systolic Range</h4>
           <div className="space-y-2">

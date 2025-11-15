@@ -65,7 +65,7 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
     }
 
     return (
-      <div className="mb-4 px-3 py-2 bg-primary-50 border border-primary-100 text-primary-700 text-sm rounded-md flex items-center gap-2">
+      <div className="mb-4 px-3 py-2 bg-primary-50/80 backdrop-blur-sm border border-primary-100 text-primary-700 text-xs sm:text-sm rounded-lg flex items-center gap-2">
         <Clock className="h-4 w-4" />
         <span>
           Showing readings recorded between {formatHourLabel(timeBand.startHour)} and {formatHourLabel(timeBand.endHour)} each day.
@@ -76,20 +76,20 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="glass-card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center">
-            <div className="bg-secondary-100 p-2 rounded-lg mr-3">
-              <TrendingUp className="h-6 w-6 text-secondary-600" />
+            <div className="bg-gradient-to-br from-secondary-500 to-secondary-600 p-2 rounded-lg mr-3 flex-shrink-0">
+              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Blood Pressure Trends</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Blood Pressure Trends</h3>
           </div>
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-white/50 backdrop-blur-sm rounded-lg p-1 gap-1">
             {(['week', 'month', 'all'] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => onPeriodChange(p)}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                className={`px-2 sm:px-3 py-1.5 sm:py-1 text-xs sm:text-sm rounded-md transition-colors min-h-[36px] sm:min-h-0 ${
                   period === p
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -111,23 +111,23 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="glass-card p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
         <div className="flex items-center">
-          <div className="bg-secondary-100 p-2 rounded-lg mr-3">
-            <TrendingUp className="h-6 w-6 text-secondary-600" />
+          <div className="bg-gradient-to-br from-secondary-500 to-secondary-600 p-2 rounded-lg mr-3 flex-shrink-0">
+            <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Blood Pressure Trends</h3>
-            <p className="text-sm text-gray-500">{getPeriodLabel(period)}</p>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Blood Pressure Trends</h3>
+            <p className="text-xs sm:text-sm text-gray-500">{getPeriodLabel(period)}</p>
           </div>
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-1">
+        <div className="flex bg-white/50 backdrop-blur-sm rounded-lg p-1 gap-1">
           {(['week', 'month', 'all'] as const).map((p) => (
             <button
               key={p}
               onClick={() => onPeriodChange(p)}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              className={`px-2 sm:px-3 py-1.5 sm:py-1 text-xs sm:text-sm rounded-md transition-colors min-h-[36px] sm:min-h-0 ${
                 period === p
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -140,14 +140,17 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
       </div>
       {renderTimeBandNotice()}
 
-      <div className="h-80">
+      <div className="h-64 sm:h-80 lg:h-96">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="date" 
               stroke="#6b7280"
-              fontSize={12}
+              tick={{ fontSize: 10 }}
+              angle={-45}
+              textAnchor="end"
+              height={60}
               tickLine={false}
               axisLine={false}
             />
@@ -155,7 +158,8 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
               yAxisId="pressure"
               orientation="left"
               stroke="#6b7280"
-              fontSize={12}
+              tick={{ fontSize: 10 }}
+              width={40}
               tickLine={false}
               axisLine={false}
               domain={[60, 200]}
@@ -164,7 +168,8 @@ export const BloodPressureChart: React.FC<BloodPressureChartProps> = ({
               yAxisId="heartRate"
               orientation="right"
               stroke="#6b7280"
-              fontSize={12}
+              tick={{ fontSize: 10 }}
+              width={40}
               tickLine={false}
               axisLine={false}
               domain={[40, 120]}

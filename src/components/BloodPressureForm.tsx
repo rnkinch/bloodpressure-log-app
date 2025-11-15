@@ -87,18 +87,23 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
-      <div className="flex items-center mb-6">
-        <div className="bg-primary-100 p-2 rounded-lg mr-3">
-          <Heart className="h-6 w-6 text-primary-600" />
+    <div className="glass-card-hover p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
+      <div className="flex items-center mb-6 sm:mb-8">
+        <div className="bg-gradient-to-br from-primary-500 to-primary-600 p-2 sm:p-3 rounded-xl sm:rounded-xl mr-3 sm:mr-4 shadow-lg flex-shrink-0">
+          <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-900">
-          {isEditing ? 'Edit Reading' : 'Add Blood Pressure Reading'}
-        </h2>
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {isEditing ? 'Edit Reading' : 'Add Blood Pressure Reading'}
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1">
+            {isEditing ? 'Update your blood pressure reading' : 'Record a new blood pressure measurement'}
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Systolic (mmHg)
@@ -109,8 +114,8 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
               max="300"
               value={formData.systolic}
               onChange={(e) => handleInputChange('systolic', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.systolic ? 'border-red-500' : 'border-gray-300'
+              className={`input-modern ${
+                errors.systolic ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''
               }`}
               placeholder="120"
             />
@@ -129,8 +134,8 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
               max="200"
               value={formData.diastolic}
               onChange={(e) => handleInputChange('diastolic', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                errors.diastolic ? 'border-red-500' : 'border-gray-300'
+              className={`input-modern ${
+                errors.diastolic ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''
               }`}
               placeholder="80"
             />
@@ -150,8 +155,8 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
             max="200"
             value={formData.heartRate}
             onChange={(e) => handleInputChange('heartRate', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-              errors.heartRate ? 'border-red-500' : 'border-gray-300'
+            className={`input-modern ${
+              errors.heartRate ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''
             }`}
             placeholder="72"
           />
@@ -170,7 +175,7 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
               type="datetime-local"
               value={formData.timestamp}
               onChange={(e) => handleInputChange('timestamp', e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="input-modern pl-10"
             />
           </div>
           
@@ -222,25 +227,25 @@ export const BloodPressureForm: React.FC<BloodPressureFormProps> = ({
             value={formData.notes}
             onChange={(e) => handleInputChange('notes', e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="input-modern"
             placeholder="Any additional notes about this reading..."
           />
         </div>
 
 
-        <div className="flex gap-3 pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4 sm:pt-6">
           <button
             type="submit"
-            className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+            className="btn-modern flex-1 flex items-center justify-center min-h-[44px] sm:min-h-0"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             {isEditing ? 'Update Reading' : 'Add Reading'}
           </button>
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+              className="btn-modern-secondary min-h-[44px] sm:min-h-0"
             >
               Cancel
             </button>
